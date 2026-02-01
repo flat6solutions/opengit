@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "opengit",
+  "description": "A CLI tool for managing Git",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.3.6",
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "@opencode-ai/sdk": "latest"
+  }
+}

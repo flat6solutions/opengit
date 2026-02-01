@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "version": "0.0.1",
+  "name": "opengit",
+  "description": "A CLI tool for managing Git",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "opengit": "bin/opengit"
+  },
+  "scripts": {
+    "dev": "bun run --watch src/index.tsx",
+    "build": "bun run scripts/build.ts"
+  },
+  "devDependencies": {
+    "@tsconfig/bun": "latest",
+    "@types/bun": "latest"
+  },
+  "dependencies": {
+    "@opentui/core": "^0.1.75",
+    "@opentui/solid": "^0.1.75",
+    "clipboardy": "^5.0.2",
+    "remeda": "^2.33.4",
+    "solid-js": "^1.9.10",
+    "xdg-basedir": "^5.1.0",
+    "zod": "^4.3.6"
+  }
+}
