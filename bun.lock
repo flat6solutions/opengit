@@ -15,8 +15,8 @@
         "opengit": "bin/opengit",
       },
       "dependencies": {
-        "@opentui/core": "^0.1.75",
-        "@opentui/solid": "^0.1.75",
+        "@opentui/core": "^0.1.74",
+        "@opentui/solid": "^0.1.74",
         "clipboardy": "^5.0.2",
         "remeda": "^2.33.4",
         "solid-js": "^1.9.10",

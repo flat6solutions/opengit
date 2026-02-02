@@ -1,0 +1,98 @@
+name: publish
+run-name: "${{ format('release {0}', inputs.bump) }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Bump major, minor, or patch"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      version:
+        description: "Override version (optional)"
+        required: false
+        type: string
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.version || inputs.bump }}
+
+permissions:
+  id-token: write
+  contents: write
+  packages: write
+
+jobs:
+  publish:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    if: github.repository == 'flat6solutions/opengit'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - run: git fetch --force --tags
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Setup Git Identity
+        run: |
+          git config --global user.email "kustovsteven@gmail.com"
+          git config --global user.name "opengit"
+
+      - name: Install opencode
+        if: inputs.bump || inputs.version
+        run: bun install -g opencode-ai@latest
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Publish
+        id: publish
+        run: ./script/publish-start.ts
+        env:
+          OPENGIT_BUMP: ${{ inputs.bump }}
+          OPENGIT_VERSION: ${{ inputs.version }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: opengit-binaries
+          path: |
+            packages/cli/dist/*.tar.gz
+            packages/cli/dist/*.zip
+
+    outputs:
+      release: ${{ steps.publish.outputs.release }}
+      tag: ${{ steps.publish.outputs.tag }}
+      version: ${{ steps.publish.outputs.version }}
+
+  publish-release:
+    needs: publish
+    if: needs.publish.outputs.tag
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.publish.outputs.tag }}
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Undraft Release
+        run: ./script/publish-complete.ts
+        env:
+          OPENGIT_VERSION: ${{ needs.publish.outputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
