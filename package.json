@@ -5,6 +5,9 @@
   "private": true,
   "type": "module",
   "packageManager": "bun@1.3.12",
+  "scripts": {
+    "dev": "bun run --conditions=browser ./packages/cli/src/index.tsx"
+  },
   "workspaces": [
     "packages/*"
   ],
