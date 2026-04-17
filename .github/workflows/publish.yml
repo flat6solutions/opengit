@@ -40,7 +40,7 @@ jobs:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      - uses: ./.github/actions/setup-git-committer
+      - uses: ./.github/setup-git-committer
         id: committer
         with:
           opengit-app-id: ${{ secrets.OPENGIT_APP_ID }}
@@ -85,7 +85,7 @@ jobs:
 
       - name: Setup git committer
         id: committer
-        uses: ./.github/actions/setup-git-committer
+        uses: ./.github/setup-git-committer
         with:
           opengit-app-id: ${{ secrets.OPENGIT_APP_ID }}
           opengit-app-secret: ${{ secrets.OPENGIT_APP_SECRET }}
