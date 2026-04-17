@@ -1,69 +1,124 @@
 import { KVProvider } from "@context/kv"
-import { ApplicationProvider } from "@context/application"
+import { ApplicationProvider, useApplication } from "@context/application"
 import { ThemeProvider, useTheme } from "@context/theme"
 import { KeybindProvider, useKeybind } from "@context/keybind"
+import { Clipboard } from "@util/clipboard"
 import { useKeyboard, useRenderer } from "@opentui/solid"
-
-import Files from "@components/files"
-import Diff from "@components/diff"
-import DiffHeader from "@components/diff/header"
+import { useDialog, DialogProvider } from "@ui/dialog"
+import { Toast, ToastProvider, useToast } from "@context/toast"
+import Header from "@components/panes/header"
+import Keybinds from "@components/keybinds"
+import { onMount } from "solid-js"
+import { Opencode } from "@lib/opencode"
+import { Git } from "@lib/git"
+import Sidebar from "@components/sidebar"
+import Main from "@components/main"
+import ThemesDialog from "@components/dialogs/themes"
 
 export function tui() {
-    return (
-        <KVProvider>
-            <ApplicationProvider>
-                <ThemeProvider mode="dark">
-                    <KeybindProvider>
-                        <App />
-                    </KeybindProvider>
-                </ThemeProvider>
-            </ApplicationProvider>
-        </KVProvider>
-    )
+  return (
+    <ToastProvider>
+      <KVProvider>
+        <ApplicationProvider>
+          <ThemeProvider mode="dark">
+            <KeybindProvider>
+              <DialogProvider>
+                <App />
+              </DialogProvider>
+            </KeybindProvider>
+          </ThemeProvider>
+        </ApplicationProvider>
+      </KVProvider>
+    </ToastProvider>
+  )
 }
 
 function App() {
-    const renderer = useRenderer()
-    const keybind = useKeybind()
-    const theme = useTheme()
+  const renderer = useRenderer()
+  const keybind = useKeybind()
+  const theme = useTheme()
+  const dialog = useDialog()
+  const app = useApplication()
+  const toast = useToast()
 
-    function exit() {
-        renderer.setTerminalTitle('')
-        renderer.destroy()
-        process.exit(0)
+
+  function exit() {
+    Opencode.closeClient()
+    renderer.setTerminalTitle('')
+    renderer.destroy()
+    process.exit(0)
+  }
+
+  async function setupAi() {
+    const available = await Opencode.providers()
+    if (available.length > 0) {
+      app.setConfig({ ...app.config, aiEnabled: true })
+    }
+  }
+
+  async function setup() {
+    const branch = await Git.getCurrentBranch()
+    if (branch) app.setBranch(branch)
+    await setupAi()
+  }
+
+  useKeyboard(event => {
+    if (keybind.match("theme_mode_toggle", event)) {
+      dialog.replace(() => <ThemesDialog />)
     }
 
-    useKeyboard(event => {
-        if (keybind.match("app_exit", event)) {
-            exit()
-        }
+    if (keybind.match("debug_toggle", event)) {
+      renderer?.console.toggle();
+      renderer?.toggleDebugOverlay();
+    }
 
-        if (keybind.match("theme_mode_toggle", event)) {
-            theme.setMode(theme.mode() === 'light' ? 'dark' : 'light')
-        }
+    if (dialog.stack.length > 0) return
 
-        if (keybind.match("debug_toggle", event)) {
-            renderer?.console.toggle();
-            renderer?.toggleDebugOverlay();
-        }
-    })
+    if (keybind.match("app_exit", event)) {
+      exit()
+    }
+  })
 
-    return (
+  onMount(setup)
+
+  return (
+    <>
+      <Toast />
+      <box
+        flexDirection="column"
+        gap={1}
+        backgroundColor={theme.theme.background}
+        padding={1}
+        width="100%"
+        height="100%"
+        onMouseUp={async () => {
+          const text = renderer.getSelection()?.getSelectedText()
+          if (text && text.length > 0) {
+            const base64 = Buffer.from(text).toString("base64")
+            const osc52 = `\x1b]52;c;${base64}\x07`
+            const finalOsc52 = process.env["TMUX"] ? `\x1bPtmux;\x1b${osc52}\x1b\\` : osc52
+            /* @ts-expect-error */
+            renderer.writeOut(finalOsc52)
+            await Clipboard.copy(text)
+            .then(() => toast.show({ message: "Copied to clipboard", variant: "info" }))
+            .catch(toast.error)
+            renderer.clearSelection()
+          }
+        }}
+      >
+        <Header />
         <box
-            width="100%"
-            height="100%"
-            flexDirection="row"
-            gap={1}
-            backgroundColor={theme.theme.background}
-            padding={1}
+          flexDirection="row"
+          gap={1}
+          flexGrow={1}
         >
-            <box height="100%" width="30%">
-                <Files />
-            </box>
-            <box height="100%" width="70%" flexDirection="column" gap={1}>
-                <DiffHeader />
-                <Diff />
-            </box>
+          <box flexGrow={1} flexDirection="row" gap={1}>
+            <Sidebar />
+            <Main />
+          </box>
         </box>
-    )
+        <Keybinds />
+      </box>
+    </>
+  )
 }

@@ -4,22 +4,26 @@
   "name": "opengit",
   "description": "A CLI tool for managing Git",
   "type": "module",
-  "private": true,
+  "private": false,
   "bin": {
     "opengit": "bin/opengit"
   },
+  "files": ["bin/", "package.json", "README.md"],
   "scripts": {
     "dev": "bun run --watch src/index.tsx",
-    "build": "bun run scripts/build.ts"
+    "build": "bun run scripts/build.ts",
+    "binary": "bun build ./src/index.tsx --compile --outfile ./bin/opengit"
   },
   "devDependencies": {
     "@tsconfig/bun": "latest",
     "@types/bun": "latest"
   },
   "dependencies": {
-    "@opentui/core": "^0.1.75",
-    "@opentui/solid": "^0.1.75",
+    "@opencode-ai/sdk": "^1.4.1",
+    "@opentui/core": "^0.1.97",
+    "@opentui/solid": "^0.1.97",
     "clipboardy": "^5.0.2",
+    "opentui-spinner": "^0.0.6",
     "remeda": "^2.33.4",
     "solid-js": "^1.9.10",
     "xdg-basedir": "^5.1.0",

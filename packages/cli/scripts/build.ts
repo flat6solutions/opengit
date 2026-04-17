@@ -16,6 +16,9 @@ import pkg from "../package.json"
 
 const singleFlag = process.argv.includes("--single")
 const skipInstall = process.argv.includes("--skip-install")
+const sign = process.env.OPENGIT_CODESIGN_IDENTITY
+const adhoc = process.env.OPENGIT_ADHOC_SIGN !== "0"
+const entitlements = path.resolve(dir, "./scripts/entitlements.plist")
 
 const allTargets: {
   os: string
@@ -82,6 +85,8 @@ const targets = singleFlag
 
 console.log(`Building OpenGit v${pkg.version}`)
 console.log(`Target platforms: ${targets.length}`)
+if (sign) console.log(`Signing macOS binaries with ${sign}`)
+else if (adhoc && process.platform === "darwin") console.log("Ad-hoc signing local macOS binaries")
 console.log("")
 
 await $`rm -rf dist`
@@ -146,6 +151,18 @@ for (const item of targets) {
       console.error(log)
     }
     process.exit(1)
+  }
+
+  const out = `dist/${name}/bin/opengit${exeExtension}`
+  if (item.os === "darwin") {
+    // Bun emits a stale LC_CODE_SIGNATURE blob; strip it before signing.
+    await $`codesign --remove-signature ${out}`.quiet().nothrow()
+    if (sign) {
+      await $`codesign --force --deep --options runtime --entitlements ${entitlements} --sign ${sign} ${out}`
+    }
+    if (!sign && adhoc && process.platform === "darwin") {
+      await $`codesign --force --deep --sign - ${out}`
+    }
   }
 
   await Bun.file(`dist/${name}/package.json`).write(

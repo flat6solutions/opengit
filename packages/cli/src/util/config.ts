@@ -7,6 +7,18 @@ export const KeybindsConfig = z.object({
   debug_toggle: z.string().optional().default("ctrl+d").describe("Toggle debug mode"),
   next: z.string().optional().default("j,up").describe("Next object"),
   previous: z.string().optional().default("k,down").describe("Previous object"),
+  discard_file: z.string().optional().default("d").describe("Discard file"),
+  stage_unstage_file: z.string().optional().default("space").describe("Stage/Unstage file"),
+  stage_all_files: z.string().optional().default("a").describe("Stage all files"),
+  unstage_all_files: z.string().optional().default("shift+a").describe("Unstage all files"),
+  commit: z.string().optional().default("c").describe("Commit staged files"),
+  close_dialog: z.string().optional().default("esc").describe("Close dialog"),
+  confirm: z.string().optional().default("return").describe("Confirm action"),
+  trigger_generic_action: z.string().optional().default("<leader>g").describe("Trigger generic action"),
+  trigger_sidebar: z.string().optional().default("<leader>b").describe("Trigger sidebar"),
+  trigger_diff: z.string().optional().default("<leader>d").describe("Trigger diff"),
+  file_pane: z.string().optional().default("1").describe("Trigger file pane"),
+  branch_pane: z.string().optional().default("2").describe("Trigger branch pane"),
 })
 
 export type KeybindsConfig = z.infer<typeof KeybindsConfig>

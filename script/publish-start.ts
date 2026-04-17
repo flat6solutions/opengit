@@ -5,6 +5,8 @@ import { Script } from "../packages/script/src/index.ts"
 import { buildNotes, getLatestRelease } from "./changelog"
 
 let notes: string[] = []
+const sign = process.env.OPENGIT_CODESIGN_IDENTITY
+const notary = process.env.OPENGIT_NOTARY_PROFILE
 
 console.log("=== publishing ===\n")
 
@@ -46,6 +48,10 @@ for (const dir of dirs) {
   } else {
     await $`zip -rj ${distDir}/${dir}.zip ${fullPath}/bin/`
     console.log(`Created ${dir}.zip`)
+    if (dir.includes("darwin") && sign && notary) {
+      await $`xcrun notarytool submit ${distDir}/${dir}.zip --keychain-profile ${notary} --wait`
+      console.log(`Notarized ${dir}.zip`)
+    }
   }
 }
 
