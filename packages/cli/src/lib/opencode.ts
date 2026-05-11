@@ -27,8 +27,8 @@ export namespace Opencode {
       const opencode = await getClient()
       const result = await opencode.client.config.providers()
       return result.data?.providers ?? []
-    } catch(e) {
-      console.log('Error fetching opencode providers', e)
+    } catch (e) {
+      console.log("Error fetching opencode providers", e)
       return []
     }
   }
@@ -49,9 +49,9 @@ export namespace Opencode {
       const end = Date.now()
       console.log(`Opencode prompt took ${(end - start) / 1000}s`)
       console.log("res", result.data?.parts)
-      const text = result.data?.parts?.find(p => p.type === "text")?.text ?? null
+      const text = result.data?.parts?.find((p) => p.type === "text")?.text ?? null
       return text
-    } catch(e) {
+    } catch (e) {
       return null
     }
   }

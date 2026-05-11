@@ -18,28 +18,6 @@ const Branch = z.object({
 export type Branch = z.infer<typeof Branch>
 
 let cachedGitRoot: string | null = null
-const FIELD = "\x1f"
-const RECORD = "\x1e"
-
-function parseCommit(text: string) {
-  const [hash = "", refs = "", author = "", email = "", relative = "", subject = ""] = text.trimEnd().split(FIELD)
-  return Commit.parse({
-    hash,
-    refs,
-    author,
-    email,
-    relative,
-    subject,
-  })
-}
-
-function readCommits(text: string) {
-  return text
-    .split(RECORD)
-    .map(line => line.trim())
-    .filter(Boolean)
-    .map(parseCommit)
-}
 
 export namespace Git {
   export async function getGitRoot() {
@@ -62,14 +40,21 @@ export namespace Git {
 
   export async function getBranches(): Promise<Array<Branch>> {
     const root = await getGitRoot()
-    const res = await $`git -C ${root} for-each-ref --sort=-committerdate --format="%(refname:short)%00%(HEAD)" refs/heads`.quiet().nothrow()
-    return res.text().split("\n").filter(Boolean).map(line => {
-      const [name = "", head = ""] = line.split("\0")
-      return {
-        name,
-        current: head.trim() === "*",
-      }
-    })
+    const res =
+      await $`git -C ${root} for-each-ref --sort=-committerdate --format="%(refname:short)%00%(HEAD)" refs/heads`
+        .quiet()
+        .nothrow()
+    return res
+      .text()
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        const [name = "", head = ""] = line.split("\0")
+        return {
+          name,
+          current: head.trim() === "*",
+        }
+      })
   }
 
   export function isFileStaged(status: string) {
@@ -123,45 +108,11 @@ export namespace Git {
     const stdout = res.stdout.toString().trim()
 
     const useful =
-      stderr.split("\n").find(line => line.trim().length > 0) ||
-      stdout.split("\n").find(line => line.trim().length > 0) ||
+      stderr.split("\n").find((line) => line.trim().length > 0) ||
+      stdout.split("\n").find((line) => line.trim().length > 0) ||
       `git commit failed (exit ${res.exitCode})`
 
     return { error: useful }
-  }
-
-  export async function getCommits(branch: string, limit = 100, skip = 0): Promise<Array<Commit>> {
-    const root = await getGitRoot()
-    if (!branch) return []
-    const start = Date.now()
-    console.log(`[commit-history] git log start branch=${branch} skip=${skip} limit=${limit}`)
-    const proc = Bun.spawn([
-      "git",
-      "-C",
-      root,
-      "log",
-      "--skip",
-      String(skip),
-      "-n",
-      String(limit),
-      "--decorate=short",
-      "--date=relative",
-      `--pretty=format:%h${FIELD}%d${FIELD}%an${FIELD}%ae${FIELD}%ar${FIELD}%s${RECORD}`,
-      branch,
-    ], {
-      stdout: "pipe",
-      stderr: "pipe",
-    })
-    const [stdout, stderr, code] = await Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-      proc.exited,
-    ])
-    const commits = readCommits(stdout)
-    console.log(`[commit-history] git log end branch=${branch} skip=${skip} limit=${limit} code=${code} commits=${commits.length} ms=${Date.now() - start}`)
-    if (code === 0) return commits
-    if (!stderr.trim()) return []
-    throw new Error(stderr.trim())
   }
 
   export async function discardFile(path: string, status?: string) {
@@ -182,19 +133,22 @@ export namespace Git {
     const stdout = res.stdout.toString().trim()
 
     const useful =
-      stderr.split("\n").find(line => line.trim().length > 0) ||
-      stdout.split("\n").find(line => line.trim().length > 0) ||
+      stderr.split("\n").find((line) => line.trim().length > 0) ||
+      stdout.split("\n").find((line) => line.trim().length > 0) ||
       `git restore failed (exit ${res.exitCode})`
 
     return { error: useful }
   }
 
-  export function getLineCounts(diff: string): { added: number; removed: number } {
+  export function getLineCounts(diff: string): {
+    added: number
+    removed: number
+  } {
     let added = 0
     let removed = 0
     for (const line of diff.split("\n")) {
       if (line.startsWith("+") && !line.startsWith("+++")) added++
-        else if (line.startsWith("-") && !line.startsWith("---")) removed++
+      else if (line.startsWith("-") && !line.startsWith("---")) removed++
     }
     return { added, removed }
   }
@@ -202,8 +156,8 @@ export namespace Git {
   export async function getDiff(path: string, status: string) {
     const root = await getGitRoot()
     const isUntracked = status === "??"
-    const isStaged = status[0] !== ' ' && status[0] !== '?'
-    const hasUnstagedChanges = status[1] !== ' '
+    const isStaged = status[0] !== " " && status[0] !== "?"
+    const hasUnstagedChanges = status[1] !== " "
 
     if (isUntracked) {
       // Untracked file - compare against nothing (shows all content as additions)

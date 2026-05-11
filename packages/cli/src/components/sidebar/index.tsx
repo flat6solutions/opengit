@@ -1,28 +1,26 @@
-import { createSignal, Show } from "solid-js"
-import { useKeyboard } from "@opentui/solid"
-import { useKeybind } from "@context/keybind"
-import Files from "@components/panes/files"
-import Branches from "@components/panes/branches"
+import { createSignal, Show } from "solid-js";
+import { useKeyboard } from "@opentui/solid";
+import { useKeybind } from "@context/keybind";
+import Files from "@components/panes/files";
 
 export default function Sidebar() {
-  const keybind = useKeybind()
-  const [showSidebar, setShowSidebar] = createSignal<boolean>(true)
+  const keybind = useKeybind();
+  const [showSidebar, setShowSidebar] = createSignal<boolean>(true);
 
-  useKeyboard(event => {
+  useKeyboard((event) => {
     if (keybind.match("trigger_sidebar", event)) {
-      setShowSidebar(!showSidebar())
-      return
+      setShowSidebar(!showSidebar());
+      return;
     }
-  })
+  });
 
   return (
     <Show when={showSidebar()}>
       <box minWidth="30%" maxWidth="30%" flexDirection="column">
         <box width="100%" flexDirection="column" flexGrow={1} gap={1}>
           <Files />
-          <Branches />
         </box>
       </box>
     </Show>
-  )
+  );
 }

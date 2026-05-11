@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod"
 
 export const KeybindsConfig = z.object({
   leader: z.string().optional().default("ctrl+x").describe("Leader key for keybind combinations"),
@@ -18,7 +18,6 @@ export const KeybindsConfig = z.object({
   trigger_sidebar: z.string().optional().default("<leader>b").describe("Trigger sidebar"),
   trigger_diff: z.string().optional().default("<leader>d").describe("Trigger diff"),
   file_pane: z.string().optional().default("1").describe("Trigger file pane"),
-  branch_pane: z.string().optional().default("2").describe("Trigger branch pane"),
 })
 
 export type KeybindsConfig = z.infer<typeof KeybindsConfig>

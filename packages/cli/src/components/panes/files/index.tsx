@@ -1,12 +1,4 @@
-import {
-  createEffect,
-  createMemo,
-  createSignal,
-  onMount,
-  onCleanup,
-  For,
-  Show,
-} from "solid-js"
+import { createEffect, createMemo, createSignal, onMount, onCleanup, For, Show } from "solid-js"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { useKeybind } from "@context/keybind"
 import { useTheme } from "@context/theme"
@@ -18,13 +10,7 @@ import type { File } from "@context/application"
 import { Git } from "@lib/git"
 import { useDialog } from "@ui/dialog"
 import DiscardDialog from "@components/dialogs/discard"
-import {
-  buildFileTree,
-  flatIndexFromFileIndex,
-  flattenTree,
-  getFileCount,
-  getFileByIndex,
-} from "@util/tree"
+import { buildFileTree, flatIndexFromFileIndex, flattenTree, getFileCount, getFileByIndex } from "@util/tree"
 
 export default function Files() {
   const app = useApplication()
@@ -53,7 +39,7 @@ export default function Files() {
 
     const entries = text.split("\x00").filter(Boolean)
 
-    const files: Array<{ status: string, path: string, previousPath?: string }> = []
+    const files: Array<{ status: string; path: string; previousPath?: string }> = []
 
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i]
@@ -73,20 +59,15 @@ export default function Files() {
     const sorted = files.sort((a, b) => a.path.localeCompare(b.path))
     setFiles(sorted)
     if (!loaded()) {
-      const idx = restorePath ? sorted.findIndex(f => f.path === restorePath) : -1
+      const idx = restorePath ? sorted.findIndex((f) => f.path === restorePath) : -1
       if (idx >= 0) setSelected(idx)
       setLoaded(true)
     }
   }
 
-  useKeyboard(async event => {
+  useKeyboard(async (event) => {
     if (dialog.stack.length > 0) return
     if (app.config.activePane !== "files") return
-
-    if (keybind.match("branch_pane", event)) {
-      app.setConfig({ ...app.config, activePane: "branches" })
-      return
-    }
 
     if (keybind.match("next", event)) {
       if (selected() >= fileCount() - 1) return
@@ -185,24 +166,27 @@ export default function Files() {
   return (
     <Pane
       borderColor={active() ? theme.border : theme.backgroundPanel}
-      title="[1] Files"
-      subtitle={files().length > 0 ? `${selected() + 1}/${fileCount().toString()}`: undefined}
+      title="Files"
+      subtitle={files().length > 0 ? `${selected() + 1}/${fileCount().toString()}` : undefined}
       active={active()}
       open={active()}
       fill={active()}
       flexGrow={active() ? 1 : 0}
     >
-      <box
-        width="100%"
-        height="100%"
-      >
+      <box width="100%" height="100%">
         <Show when={files().length === 0}>
           <box paddingLeft={1} paddingRight={1}>
             <text fg={theme.textMuted}>Working directory clean</text>
           </box>
         </Show>
         <Show when={flatNodes().length > 0}>
-          <scrollbox width="100%" height="100%" ref={(r) => { fileListScrollbox = r }}>
+          <scrollbox
+            width="100%"
+            height="100%"
+            ref={(r) => {
+              fileListScrollbox = r
+            }}
+          >
             <For each={flatNodes()}>
               {(node) => {
                 const indent = node.depth * 1
@@ -216,11 +200,7 @@ export default function Files() {
                       paddingRight={1}
                       height={1}
                     >
-                      <text
-                        fg={theme.textMuted}
-                      >
-                        ▾ {node.name}
-                      </text>
+                      <text fg={theme.textMuted}>▾ {node.name}</text>
                     </box>
                   )
                 }
@@ -229,19 +209,13 @@ export default function Files() {
                   <box
                     flexDirection="row"
                     gap={2}
-                    backgroundColor={
-                      node.fileIndex === selected() ? theme.border : theme.backgroundPanel
-                    }
+                    backgroundColor={node.fileIndex === selected() ? theme.border : theme.backgroundPanel}
                     paddingLeft={1 + indent}
                     paddingRight={1}
                     height={1}
                   >
                     <text fg={getNameStatusColor(node.status!)}>{node.status}</text>
-                    <text
-                      fg={theme.text}
-                      wrapMode="none"
-                      truncate={true}
-                    >
+                    <text fg={theme.text} wrapMode="none" truncate={true}>
                       {node.name}
                     </text>
                   </box>

@@ -4,15 +4,15 @@ import { createSimpleContext } from "./helper"
 import { KeybindsConfig } from "@/util/config"
 import { useKV } from "./kv"
 
-type Panes = "files" | "branches"
+type Panes = "files"
 type View = "diff" | "code"
 
 type Config = {
-  theme?: string,
-  activePane: Panes,
-  mainView: View,
-  keybinds: KeybindsConfig,
-  aiEnabled: boolean,
+  theme?: string
+  activePane: Panes
+  mainView: View
+  keybinds: KeybindsConfig
+  aiEnabled: boolean
 }
 
 const File = z.object({
@@ -27,9 +27,9 @@ export const { use: useApplication, provider: ApplicationProvider } = createSimp
   init: () => {
     const kv = useKV()
     const [store, setStore] = createStore<{
-      file: File,
-      branch: string,
-      config: Config,
+      file: File
+      branch: string
+      config: Config
     }>({
       file: {
         status: "",
@@ -46,12 +46,22 @@ export const { use: useApplication, provider: ApplicationProvider } = createSimp
     })
 
     return {
-      get file() { return store.file },
-      get branch() { return store.branch },
-      get config() { return store.config },
+      get file() {
+        return store.file
+      },
+      get branch() {
+        return store.branch
+      },
+      get config() {
+        return store.config
+      },
 
-      setFile(v: File) { setStore("file", v) },
-      setBranch(v: string) { setStore("branch", v) },
+      setFile(v: File) {
+        setStore("file", v)
+      },
+      setBranch(v: string) {
+        setStore("branch", v)
+      },
       setConfig: (v: Config) => setStore("config", v),
     }
   },
