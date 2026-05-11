@@ -44,9 +44,9 @@ export default function Diff() {
 
     if (!file || !file.path) return
 
-    const root = await Git.getGitRoot() 
+    const root = await Git.getGitRoot()
     const absolutePath = join(root, file.path)
-    
+
     watchFile(absolutePath, { interval: 200 }, (curr, prev) => {
       if (curr.mtime !== prev.mtime) {
         if (debounceTimer) clearTimeout(debounceTimer)
@@ -60,23 +60,25 @@ export default function Diff() {
     setWatchedPath(absolutePath)
   }
 
-  createEffect(on(
-    () => app.file.path,
-    () => {
-      const file = app.file
-      if (file && file.path) {
-        refreshDiff(file)
-        setup(file)
-      } else {
-        setDiff("")
-        const existing = watchedPath()
-        if (existing) {
-          unwatchFile(existing)
-          setWatchedPath(null)
+  createEffect(
+    on(
+      () => app.file.path,
+      () => {
+        const file = app.file
+        if (file && file.path) {
+          refreshDiff(file)
+          setup(file)
+        } else {
+          setDiff("")
+          const existing = watchedPath()
+          if (existing) {
+            unwatchFile(existing)
+            setWatchedPath(null)
+          }
         }
-      }
-    }
-  ))
+      },
+    ),
+  )
 
   onCleanup(() => {
     const existing = watchedPath()
@@ -86,14 +88,7 @@ export default function Diff() {
 
   return (
     <Pane borderColor={theme.backgroundPanel} title="Diff" subtitle={subtitle()}>
-      <box
-        width="100%"
-        height="100%"
-        paddingLeft={1}
-        paddingRight={1}
-        flexDirection="column"
-        gap={1}
-      >
+      <box width="100%" height="100%" paddingLeft={1} paddingRight={1} flexDirection="column" gap={1}>
         <Show when={!diff()} keyed>
           <box>
             <text fg={theme.textMuted}>No changes to display</text>
@@ -101,30 +96,32 @@ export default function Diff() {
         </Show>
         <Show when={diff()} keyed>
           {(d: string) => (
-            <scrollbox width="100%" height="100%" scrollX={true}>
-              <diff
-                keyed
-                diff={d}
-                view="unified"
-                filetype={filetype(app.file.path)}
-                syntaxStyle={syntax()}
-                showLineNumbers={true}
-                width="100%"
-                fg={theme.text}
-                addedBg={theme.diffAddedBg}
-                removedBg={theme.diffRemovedBg}
-                contextBg={theme.diffContextBg}
-                addedSignColor={theme.diffHighlightAdded}
-                removedSignColor={theme.diffHighlightRemoved}
-                lineNumberFg={theme.diffLineNumber}
-                lineNumberBg={theme.diffContextBg}
-                addedLineNumberBg={theme.diffAddedLineNumberBg}
-                removedLineNumberBg={theme.diffRemovedLineNumberBg}
-              />
-            </scrollbox>
+            <>
+              <scrollbox width="100%" height="100%" scrollX={true}>
+                <diff
+                  keyed
+                  diff={d}
+                  view="unified"
+                  filetype={filetype(app.file.path)}
+                  syntaxStyle={syntax()}
+                  showLineNumbers={true}
+                  width="100%"
+                  fg={theme.text}
+                  addedBg={theme.diffAddedBg}
+                  removedBg={theme.diffRemovedBg}
+                  contextBg={theme.diffContextBg}
+                  addedSignColor={theme.diffHighlightAdded}
+                  removedSignColor={theme.diffHighlightRemoved}
+                  lineNumberFg={theme.diffLineNumber}
+                  lineNumberBg={theme.diffContextBg}
+                  addedLineNumberBg={theme.diffAddedLineNumberBg}
+                  removedLineNumberBg={theme.diffRemovedLineNumberBg}
+                />
+              </scrollbox>
+              <KeybindHelper label="View File" key="trigger_diff" />
+            </>
           )}
         </Show>
-        <KeybindHelper label="View File" key="trigger_diff" />
       </box>
     </Pane>
   )
