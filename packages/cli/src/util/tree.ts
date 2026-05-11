@@ -8,6 +8,8 @@ export type TreeNode = {
   fullPath: string
   status?: string
   previousPath?: string
+  added?: number
+  removed?: number
   children: TreeNode[]
   depth: number
 }
@@ -91,6 +93,8 @@ export function buildFileTree(files: File[]): TreeNode[] {
           ...(isFile && {
             status: file.status,
             previousPath: file.previousPath,
+            added: file.added,
+            removed: file.removed,
           }),
         }
         currentLevel.push(node)
@@ -166,8 +170,10 @@ export function getFileByIndex(
   const node = flatNodes.find((n) => n.fileIndex === fileIndex)
   if (!node || node.type !== "file") return null
   return {
-    status: node.status!,
+    status: node.status || "",
     path: node.fullPath,
     previousPath: node.previousPath,
+    added: node.added,
+    removed: node.removed,
   }
 }

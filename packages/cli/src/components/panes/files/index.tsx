@@ -56,7 +56,13 @@ export default function Files() {
       }
     }
 
-    const sorted = files.sort((a, b) => a.path.localeCompare(b.path))
+    const counted = await Promise.all(
+      files.map(async (file) => {
+        const counts = Git.getLineCounts(await Git.getDiff(file.path, file.status))
+        return { ...file, ...counts }
+      }),
+    )
+    const sorted = counted.sort((a, b) => a.path.localeCompare(b.path))
     setFiles(sorted)
     if (!loaded()) {
       const idx = restorePath ? sorted.findIndex((f) => f.path === restorePath) : -1
@@ -189,18 +195,16 @@ export default function Files() {
           >
             <For each={flatNodes()}>
               {(node) => {
-                const indent = node.depth * 1
-
                 if (node.type === "directory") {
                   return (
                     <box
                       flexDirection="row"
                       backgroundColor={theme.backgroundPanel}
-                      paddingLeft={1 + indent}
+                      paddingLeft={1}
                       paddingRight={1}
                       height={1}
                     >
-                      <text fg={theme.textMuted}>▾ {node.name}</text>
+                      <text fg={theme.textMuted}>{node.name}/</text>
                     </box>
                   )
                 }
@@ -208,16 +212,22 @@ export default function Files() {
                 return (
                   <box
                     flexDirection="row"
-                    gap={2}
+                    justifyContent="space-between"
                     backgroundColor={node.fileIndex === selected() ? theme.border : theme.backgroundPanel}
-                    paddingLeft={1 + indent}
+                    paddingLeft={1}
                     paddingRight={1}
                     height={1}
                   >
-                    <text fg={getNameStatusColor(node.status!)}>{node.status}</text>
-                    <text fg={theme.text} wrapMode="none" truncate={true}>
-                      {node.name}
-                    </text>
+                    <box flexDirection="row" gap={2} flexGrow={1}>
+                      <text fg={getNameStatusColor(node.status || "")}>{node.status}</text>
+                      <text fg={theme.text} wrapMode="none" truncate={true}>
+                        {node.name}
+                      </text>
+                    </box>
+                    <box flexDirection="row" gap={1}>
+                      {(node.added || 0) > 0 && <text fg={theme.success}>+{node.added}</text>}
+                      {(node.removed || 0) > 0 && <text fg={theme.error}>-{node.removed}</text>}
+                    </box>
                   </box>
                 )
               }}

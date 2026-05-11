@@ -19,6 +19,8 @@ const File = z.object({
   status: z.string(),
   path: z.string(),
   previousPath: z.string().optional(),
+  added: z.number().optional(),
+  removed: z.number().optional(),
 })
 export type File = z.infer<typeof File>
 
