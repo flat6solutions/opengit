@@ -107,14 +107,17 @@ export default function Diff() {
                   showLineNumbers={true}
                   width="100%"
                   fg={theme.text}
-                  addedBg={theme.diffAddedBg}
+                  // addedBg={theme.diffAddedBg}
+                  addedBg="#1F3025"
                   removedBg={theme.diffRemovedBg}
                   contextBg={theme.diffContextBg}
-                  addedSignColor={theme.diffHighlightAdded}
+                  // addedSignColor={theme.diffHighlightAdded}
+                  addedSignColor="#88D39B"
                   removedSignColor={theme.diffHighlightRemoved}
                   lineNumberFg={theme.diffLineNumber}
                   lineNumberBg={theme.diffContextBg}
-                  addedLineNumberBg={theme.diffAddedLineNumberBg}
+                  // addedLineNumberBg={theme.diffAddedLineNumberBg}
+                  addedLineNumberBg="#1F3025"
                   removedLineNumberBg={theme.diffRemovedLineNumberBg}
                 />
               </scrollbox>

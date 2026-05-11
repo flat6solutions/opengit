@@ -4,12 +4,13 @@ export function getNameStatusColor(v: string | undefined) {
   const theme = useTheme().theme
 
   switch (v) {
+    case " M":
+      return theme.accent
     case "A ":
     case "R ":
     case "M ":
     case "D ":
       return theme.success
-    case " M":
     case " D":
     case "??":
     case "AM":
