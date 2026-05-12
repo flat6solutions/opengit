@@ -17,6 +17,11 @@ export default function Diff() {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
   const counts = createMemo(() => Git.getLineCounts(diff()))
+  const diffFiletype = createMemo(() => {
+    const type = filetype(app.file.path)
+    if (type === "astro") return "html"
+    return type
+  })
 
   const subtitle = createMemo(() => {
     const d = diff()
@@ -102,7 +107,7 @@ export default function Diff() {
                   keyed
                   diff={d}
                   view="split"
-                  filetype={filetype(app.file.path)}
+                  filetype={diffFiletype()}
                   syntaxStyle={syntax()}
                   showLineNumbers={true}
                   width="100%"
