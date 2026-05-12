@@ -21,6 +21,21 @@ import opencode from "./theme/opencode.json" with { type: "json" }
 import rosepine from "./theme/rosepine.json" with { type: "json" }
 import tokyonight from "./theme/tokyonight.json" with { type: "json" }
 import vesper from "./theme/vesper.json" with { type: "json" }
+import lucentOrng from "./theme/lucent-orng.json" with { type: "json" }
+import material from "./theme/material.json" with { type: "json" }
+import matrix from "./theme/matrix.json" with { type: "json" }
+import mercury from "./theme/mercury.json" with { type: "json" }
+import monokai from "./theme/monokai.json" with { type: "json" }
+import nightowl from "./theme/nightowl.json" with { type: "json" }
+import nord from "./theme/nord.json" with { type: "json" }
+import oneDark from "./theme/one-dark.json" with { type: "json" }
+import orng from "./theme/orng.json" with { type: "json" }
+import osakaJade from "./theme/osaka-jade.json" with { type: "json" }
+import palenight from "./theme/palenight.json" with { type: "json" }
+import solarized from "./theme/solarized.json" with { type: "json" }
+import synthwave84 from "./theme/synthwave84.json" with { type: "json" }
+import vercel from "./theme/vercel.json" with { type: "json" }
+import zenburn from "./theme/zenburn.json" with { type: "json" }
 import { useKV } from "./kv"
 import { useRenderer } from "@opentui/solid"
 import { createStore, produce } from "solid-js/store"
@@ -137,10 +152,25 @@ export const DEFAULT_THEMES: Record<string, ThemeJson> = {
   github,
   gruvbox,
   kanagawa,
+  lucentOrng,
+  material,
+  matrix,
+  mercury,
+  monokai,
+  nightowl,
+  nord,
+  oneDark,
   opencode,
+  orng,
+  osakaJade,
+  palenight,
   rosepine,
+  solarized,
+  synthwave84,
   tokyonight,
+  vercel,
   vesper,
+  zenburn,
 }
 
 function resolveTheme(theme: ThemeJson, mode: "dark" | "light") {
