@@ -109,16 +109,19 @@ export default function Diff() {
                   fg={theme.text}
                   // addedBg={theme.diffAddedBg}
                   addedBg="#1F3025"
-                  removedBg={theme.diffRemovedBg}
+                  // removedBg={theme.diffRemovedBg}
+                  removedBg="#372526"
                   contextBg={theme.diffContextBg}
                   // addedSignColor={theme.diffHighlightAdded}
-                  addedSignColor="#88D39B"
-                  removedSignColor={theme.diffHighlightRemoved}
+                  addedSignColor="#88d39b"
+                  // removedSignColor={theme.diffHighlightRemoved}
+                  removedSignColor="#f0a0a0"
                   lineNumberFg={theme.diffLineNumber}
                   lineNumberBg={theme.diffContextBg}
                   // addedLineNumberBg={theme.diffAddedLineNumberBg}
                   addedLineNumberBg="#1F3025"
-                  removedLineNumberBg={theme.diffRemovedLineNumberBg}
+                  // removedLineNumberBg={theme.diffRemovedLineNumberBg}
+                  removedLineNumberBg="#372526"
                 />
               </scrollbox>
               <KeybindHelper label="View File" key="trigger_diff" />
