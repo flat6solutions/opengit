@@ -15,9 +15,8 @@ export const KeybindsConfig = z.object({
   close_dialog: z.string().optional().default("esc").describe("Close dialog"),
   confirm: z.string().optional().default("return").describe("Confirm action"),
   trigger_generic_action: z.string().optional().default("<leader>g").describe("Trigger generic action"),
-  trigger_sidebar: z.string().optional().default("<leader>b").describe("Trigger sidebar"),
+  trigger_sidebar: z.string().optional().default("s").describe("Trigger sidebar"),
   trigger_diff: z.string().optional().default("<leader>d").describe("Trigger diff"),
-  file_pane: z.string().optional().default("1").describe("Trigger file pane"),
 })
 
 export type KeybindsConfig = z.infer<typeof KeybindsConfig>
