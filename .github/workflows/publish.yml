@@ -43,7 +43,7 @@ jobs:
       - uses: ./.github/setup-git-committer
         id: committer
         with:
-          opengit-app-id: ${{ secrets.OPENGIT_APP_ID }}
+          opengit-client-id: ${{ secrets.OPENGIT_CLIENT_ID }}
           opengit-app-secret: ${{ secrets.OPENGIT_APP_SECRET }}
 
       - name: Install Dependencies
@@ -87,7 +87,7 @@ jobs:
         id: committer
         uses: ./.github/setup-git-committer
         with:
-          opengit-app-id: ${{ secrets.OPENGIT_APP_ID }}
+          opengit-client-id: ${{ secrets.OPENGIT_CLIENT_ID }}
           opengit-app-secret: ${{ secrets.OPENGIT_APP_SECRET }}
 
       - name: Build
@@ -100,7 +100,7 @@ jobs:
           GH_REPO: ${{ needs.version.outputs.repo }}
           GH_TOKEN: ${{ steps.committer.outputs.token }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: opengit-cli
           path: packages/cli/dist
@@ -135,7 +135,7 @@ jobs:
       - name: Install Dependencies
         run: bun install
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           name: opengit-cli
           path: packages/cli/dist
