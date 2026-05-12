@@ -18,7 +18,9 @@ export function Pane(props: PaneProps) {
   const [local, others] = splitProps(props, ["children", "title", "subtitle", "borderColor", "active", "open", "fill"])
   const theme = useTheme()
   const colors = theme.theme
-  const [bg, setBg] = createSignal(theme.mode() === "dark" ? theme.theme.backgroundPanel : theme.theme.backgroundElement)
+  const [bg, setBg] = createSignal(
+    theme.mode() === "dark" ? theme.theme.backgroundPanel : theme.theme.backgroundElement,
+  )
   const open = () => local.open ?? true
   const fill = () => local.fill ?? false
 
@@ -63,31 +65,19 @@ export function Pane(props: PaneProps) {
       >
         {local.title && (
           <box flexDirection="row" justifyContent="space-between">
-            <text
-              attributes={TextAttributes.BOLD}
-              marginBottom={1}
-              marginLeft={1}
-              marginRight={1}
-              fg={colors.text}
-            >
+            <text marginBottom={1} marginLeft={1} marginRight={1} fg={colors.text}>
               {local.title}
             </text>
-            {local.subtitle && (
-              typeof local.subtitle === "string" ? (
-                <text
-                  marginBottom={open() ? 1 : 0}
-                  marginLeft={1}
-                  marginRight={1}
-                  fg={colors.textMuted}
-                >
+            {local.subtitle &&
+              (typeof local.subtitle === "string" ? (
+                <text marginBottom={open() ? 1 : 0} marginLeft={1} marginRight={1} fg={colors.textMuted}>
                   {local.subtitle}
                 </text>
               ) : (
-                  <box marginBottom={open() ? 1 : 0} marginLeft={1} marginRight={1}>
-                     {local.subtitle}
-                   </box>
-                 )
-            )}
+                <box marginBottom={open() ? 1 : 0} marginLeft={1} marginRight={1}>
+                  {local.subtitle}
+                </box>
+              ))}
           </box>
         )}
         {open() && local.children && local.children}

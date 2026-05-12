@@ -41,10 +41,9 @@ function App() {
   const app = useApplication()
   const toast = useToast()
 
-
   function exit() {
     Opencode.closeClient()
-    renderer.setTerminalTitle('')
+    renderer.setTerminalTitle("")
     renderer.destroy()
     process.exit(0)
   }
@@ -62,14 +61,14 @@ function App() {
     await setupAi()
   }
 
-  useKeyboard(event => {
+  useKeyboard((event) => {
     if (keybind.match("theme_mode_toggle", event)) {
       dialog.replace(() => <ThemesDialog />)
     }
 
     if (keybind.match("debug_toggle", event)) {
-      renderer?.console.toggle();
-      renderer?.toggleDebugOverlay();
+      renderer?.console.toggle()
+      renderer?.toggleDebugOverlay()
     }
 
     if (dialog.stack.length > 0) return
@@ -86,9 +85,9 @@ function App() {
       <Toast />
       <box
         flexDirection="column"
-        gap={1}
+        // gap={1}
         backgroundColor={theme.theme.background}
-        padding={1}
+        // padding={1}
         width="100%"
         height="100%"
         onMouseUp={async () => {
@@ -100,19 +99,14 @@ function App() {
             /* @ts-expect-error */
             renderer.writeOut(finalOsc52)
             await Clipboard.copy(text)
-            .then(() => toast.show({ message: "Copied to clipboard", variant: "info" }))
-            .catch(toast.error)
+              .then(() => toast.show({ message: "Copied to clipboard", variant: "info" }))
+              .catch(toast.error)
             renderer.clearSelection()
           }
         }}
       >
-        <Header />
-        <box
-          flexDirection="row"
-          gap={1}
-          flexGrow={1}
-        >
-          <box flexGrow={1} flexDirection="row" gap={1}>
+        <box flexDirection="row" flexGrow={1}>
+          <box flexGrow={1} flexDirection="row">
             <Sidebar />
             <Main />
           </box>

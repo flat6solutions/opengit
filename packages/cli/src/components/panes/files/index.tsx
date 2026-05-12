@@ -10,7 +10,10 @@ import type { File } from "@context/application"
 import { Git } from "@lib/git"
 import { useDialog } from "@ui/dialog"
 import DiscardDialog from "@components/dialogs/discard"
-import { buildFileTree, flatIndexFromFileIndex, flattenTree, getFileCount, getFileByIndex } from "@util/tree"
+
+type Row =
+  | { type: "directory"; path: string }
+  | { type: "file"; file: File; fileIndex: number; name: string }
 
 export default function Files() {
   const app = useApplication()
@@ -26,12 +29,21 @@ export default function Files() {
 
   let fileListScrollbox: ScrollBoxRenderable | undefined
 
-  const flatNodes = createMemo(() => {
-    const tree = buildFileTree(files())
-    return flattenTree(tree)
-  })
+  const rows = createMemo(() =>
+    files().flatMap((file, index, list): Row[] => {
+      const parts = file.path.split("/")
+      const path = parts.slice(0, -1).join("/")
+      const previous = list[index - 1]
+      const previousPath = previous ? previous.path.split("/").slice(0, -1).join("/") : undefined
+      const row = { type: "file" as const, file, fileIndex: index, name: parts[parts.length - 1] }
 
-  const fileCount = createMemo(() => getFileCount(flatNodes()))
+      if (path === previousPath) return [row]
+      if (!path) return [row]
+      return [{ type: "directory", path }, row]
+    }),
+  )
+
+  const fileCount = createMemo(() => files().length)
 
   async function getFiles() {
     const out = await Bun.$`git status --porcelain -z --untracked-files=all --find-renames=50%`.quiet().nothrow()
@@ -88,7 +100,7 @@ export default function Files() {
     }
 
     if (keybind.match("discard_file", event)) {
-      const file = getFileByIndex(flatNodes(), selected())
+      const file = files()[selected()]
       if (!file) return
       dialog.replace(() => (
         <DiscardDialog
@@ -127,7 +139,7 @@ export default function Files() {
   createEffect(() => {
     if (!loaded()) return
     if (fileCount() > 0) {
-      const file = getFileByIndex(flatNodes(), selected()) || { status: "", path: "" }
+      const file = files()[selected()] || { status: "", path: "" }
       app.setFile(file)
     } else {
       app.setFile({ status: "", path: "" })
@@ -139,8 +151,8 @@ export default function Files() {
     const scrollbox = fileListScrollbox
     if (!scrollbox) return
 
-    const selectedFlatIndex = flatIndexFromFileIndex(flatNodes(), selected())
-    if (selectedFlatIndex < 0) return
+    const selectedRowIndex = rows().findIndex((row) => row.type === "file" && row.fileIndex === selected())
+    if (selectedRowIndex < 0) return
 
     const viewportHeight = Math.max(1, scrollbox.viewport.height)
     const visibleStart = scrollbox.scrollTop
@@ -149,13 +161,13 @@ export default function Files() {
     const maxVisibleIndex = visibleEnd
     const maxScrollTop = Math.max(0, scrollbox.scrollHeight - viewportHeight)
 
-    if (selectedFlatIndex < minVisibleIndex) {
-      scrollbox.scrollTo(selectedFlatIndex)
+    if (selectedRowIndex < minVisibleIndex) {
+      scrollbox.scrollTo(selectedRowIndex)
       return
     }
 
-    if (selectedFlatIndex > maxVisibleIndex) {
-      const targetScrollTop = selectedFlatIndex - (viewportHeight - 1)
+    if (selectedRowIndex > maxVisibleIndex) {
+      const targetScrollTop = selectedRowIndex - (viewportHeight - 1)
       const clampedScrollTop = Math.min(maxScrollTop, Math.max(0, targetScrollTop))
       if (clampedScrollTop !== visibleStart) {
         scrollbox.scrollTo(clampedScrollTop)
@@ -171,8 +183,7 @@ export default function Files() {
 
   return (
     <Pane
-      borderColor={active() ? theme.border : theme.backgroundPanel}
-      title="Files"
+      borderColor={theme.border}
       subtitle={files().length > 0 ? `${selected() + 1}/${fileCount().toString()}` : undefined}
       active={active()}
       open={active()}
@@ -185,7 +196,7 @@ export default function Files() {
             <text fg={theme.textMuted}>Working directory clean</text>
           </box>
         </Show>
-        <Show when={flatNodes().length > 0}>
+        <Show when={rows().length > 0}>
           <scrollbox
             width="100%"
             height="100%"
@@ -193,9 +204,9 @@ export default function Files() {
               fileListScrollbox = r
             }}
           >
-            <For each={flatNodes()}>
-              {(node) => {
-                if (node.type === "directory") {
+            <For each={rows()}>
+              {(row) => {
+                if (row.type === "directory") {
                   return (
                     <box
                       flexDirection="row"
@@ -204,7 +215,9 @@ export default function Files() {
                       paddingRight={1}
                       height={1}
                     >
-                      <text fg={theme.textMuted}>{node.name}/</text>
+                      <text fg={theme.textMuted} wrapMode="none" truncate={true}>
+                        {row.path}/
+                      </text>
                     </box>
                   )
                 }
@@ -213,20 +226,20 @@ export default function Files() {
                   <box
                     flexDirection="row"
                     justifyContent="space-between"
-                    backgroundColor={node.fileIndex === selected() ? theme.border : theme.backgroundPanel}
+                    backgroundColor={row.fileIndex === selected() ? theme.border : theme.backgroundPanel}
                     paddingLeft={1}
                     paddingRight={1}
                     height={1}
                   >
                     <box flexDirection="row" gap={2} flexGrow={1}>
-                      <text fg={getNameStatusColor(node.status || "")}>{node.status}</text>
+                      <text fg={getNameStatusColor(row.file.status || "")}>{row.file.status}</text>
                       <text fg={theme.text} wrapMode="none" truncate={true}>
-                        {node.name}
+                        {row.name}
                       </text>
                     </box>
                     <box flexDirection="row" gap={1}>
-                      {(node.added || 0) > 0 && <text fg={theme.success}>+{node.added}</text>}
-                      {(node.removed || 0) > 0 && <text fg={theme.error}>-{node.removed}</text>}
+                      {(row.file.added || 0) > 0 && <text fg={theme.success}>+{row.file.added}</text>}
+                      {(row.file.removed || 0) > 0 && <text fg={theme.error}>-{row.file.removed}</text>}
                     </box>
                   </box>
                 )

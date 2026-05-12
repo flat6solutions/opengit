@@ -87,7 +87,7 @@ export default function Diff() {
   })
 
   return (
-    <Pane borderColor={theme.backgroundPanel} title="Diff" subtitle={subtitle()}>
+    <Pane title={app.file.path} borderColor={theme.border} subtitle={subtitle()}>
       <box width="100%" height="100%" paddingLeft={1} paddingRight={1} flexDirection="column" gap={1}>
         <Show when={!diff()} keyed>
           <box>
@@ -101,7 +101,7 @@ export default function Diff() {
                 <diff
                   keyed
                   diff={d}
-                  view="unified"
+                  view="split"
                   filetype={filetype(app.file.path)}
                   syntaxStyle={syntax()}
                   showLineNumbers={true}
