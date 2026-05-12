@@ -1,10 +1,12 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "version": "0.0.1",
-  "name": "opengit",
+  "name": "@flat6/opengit",
   "description": "A CLI tool for managing Git",
   "type": "module",
-  "private": true,
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
     "opengit": "bin/opengit"
   },

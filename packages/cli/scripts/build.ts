@@ -15,6 +15,9 @@ process.chdir(dir)
 
 import pkg from "../package.json"
 
+const app = "opengit"
+const scope = "@flat6"
+
 const singleFlag = process.argv.includes("--single") || (!!process.env.CI && !process.argv.includes("--all"))
 const baselineFlag = process.argv.includes("--baseline")
 const skipInstall = process.argv.includes("--skip-install")
@@ -105,7 +108,7 @@ if (!skipInstall) {
 }
 for (const item of targets) {
   const name = [
-    pkg.name,
+    app,
     item.os === "win32" ? "windows" : item.os,
     item.arch,
     item.avx2 === false ? "baseline" : undefined,
@@ -131,7 +134,7 @@ for (const item of targets) {
     compile: {
       autoloadBunfig: false,
       autoloadDotenv: false,
-      target: name.replace(pkg.name, "bun").replace("windows", "win32") as any,
+      target: name.replace(app, "bun").replace("windows", "win32") as any,
       outfile: `dist/${name}/bin/opengit${exeExtension}`,
       execArgv: ["--"],
       windows: {},
@@ -154,7 +157,7 @@ for (const item of targets) {
   await Bun.file(`dist/${name}/package.json`).write(
     JSON.stringify(
       {
-        name,
+        name: `${scope}/${name}`,
         version: Script.version,
         os: [item.os],
         cpu: [item.arch],

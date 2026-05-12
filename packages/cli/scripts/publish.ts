@@ -16,16 +16,19 @@ process.chdir(dir)
 
 
 const version = Script.version
+const app = "opengit"
+const pkg = "@flat6/opengit"
+const scope = "@flat6"
 
 
-console.log(`Publishing opengit@${version}`)
+console.log(`Publishing ${pkg}@${version}`)
 
 
 const distDir = path.join(dir, "dist")
 const platformDirs = fs.readdirSync(distDir).filter((name) => {
   const fullPath = path.join(distDir, name)
   const stat = fs.statSync(fullPath)
-  return stat.isDirectory() && name.startsWith("opengit-")
+  return stat.isDirectory() && name.startsWith(`${app}-`)
 })
 
 
@@ -34,11 +37,11 @@ console.log(`Found ${platformDirs.length} platform packages`)
 
 const optionalDependencies: Record<string, string> = {}
 for (const platformName of platformDirs) {
-  optionalDependencies[platformName] = version
+  optionalDependencies[`${scope}/${platformName}`] = version
 }
 
 
-const mainPkgDir = path.join(distDir, "opengit")
+const mainPkgDir = path.join(distDir, app)
 await $`mkdir -p ${mainPkgDir}`
 
 
@@ -48,11 +51,11 @@ await $`cp -r ./bin ${mainPkgDir}/bin`
 await Bun.file(path.join(mainPkgDir, "package.json")).write(
   JSON.stringify(
     {
-      name: "opengit",
+      name: pkg,
       version: version,
       description: "A CLI tool for managing Git",
       bin: {
-        opengit: `./bin/opengit`,
+        [app]: `./bin/${app}`,
       },
       optionalDependencies,
     },
@@ -95,14 +98,14 @@ const publishTasks = platformDirs.map(async (platformName) => {
 await Promise.all(publishTasks)
 
 
-console.log(`\nPublishing opengit@${version}...`)
+console.log(`\nPublishing ${pkg}@${version}...`)
 try {
   await $`npm publish --access public`.cwd(mainPkgDir)
-  console.log(`✓ opengit@${version}`)
+  console.log(`✓ ${pkg}@${version}`)
 } catch (error) {
   const errorMessage = String(error)
   if (errorMessage.includes("403") || errorMessage.includes("cannot publish over") || errorMessage.includes("You cannot publish over the previously published versions")) {
-    console.log(`✓ opengit@${version} (already published)`)
+    console.log(`✓ ${pkg}@${version} (already published)`)
   } else {
     throw error
   }
