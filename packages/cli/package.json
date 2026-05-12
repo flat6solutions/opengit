@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "0.0.1",
+  "version": "1.0.7",
   "name": "@flat6/opengit",
   "description": "A CLI tool for managing Git",
   "type": "module",
