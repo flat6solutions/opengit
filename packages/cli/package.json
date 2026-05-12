@@ -4,9 +4,7 @@
   "name": "@flat6/opengit",
   "description": "A CLI tool for managing Git",
   "type": "module",
-  "publishConfig": {
-    "access": "public"
-  },
+  "private": true,
   "bin": {
     "opengit": "bin/opengit"
   },
