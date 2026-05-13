@@ -1139,11 +1139,5 @@ function getSyntaxRules(theme: Theme) {
         foreground: theme.info,
       },
     },
-    {
-      scope: ["debug"],
-      style: {
-        foreground: theme.textMuted,
-      },
-    },
   ]
 }

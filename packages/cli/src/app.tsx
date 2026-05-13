@@ -13,7 +13,6 @@ import { Git } from "@lib/git"
 import Sidebar from "@components/sidebar"
 import Main from "@components/main"
 import ThemesDialog from "@components/dialogs/themes"
-import { Debug } from "@util/debug"
 
 export function tui() {
   return (
@@ -42,7 +41,6 @@ function App() {
   const toast = useToast()
 
   function exit() {
-    Debug.log("exiting app")
     Opencode.closeClient()
     renderer.setTerminalTitle("")
     renderer.destroy()
@@ -50,21 +48,16 @@ function App() {
   }
 
   async function setupAi() {
-    Debug.log("opencode providers setup starting")
     const available = await Opencode.providers()
-    Debug.log("opencode providers setup resolved", { count: available.length })
     if (available.length > 0) {
       app.setConfig({ ...app.config, aiEnabled: true })
     }
   }
 
   async function setup() {
-    Debug.log("app setup starting")
     const branch = await Git.getCurrentBranch()
-    Debug.log("git branch resolved", { branch })
     if (branch) app.setBranch(branch)
     await setupAi()
-    Debug.log("app setup resolved")
   }
 
   useKeyboard((event) => {

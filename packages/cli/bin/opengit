@@ -5,33 +5,21 @@ const fs = require("fs")
 const path = require("path")
 const os = require("os")
 
-const debug = process.env.OPENGIT_DEBUG === "1" || process.env.OPENGIT_DEBUG === "true"
-
-function log(message, data) {
-  if (!debug) return
-  const suffix = data ? " " + JSON.stringify(data) : ""
-  console.error("[opengit debug] " + message + suffix)
-}
-
 function run(target) {
-  log("spawning binary", { target })
   const result = childProcess.spawnSync(target, process.argv.slice(2), {
     stdio: "inherit",
   })
   if (result.error) {
-    log("spawn failed", { target, error: result.error.message })
     console.error(result.error.message)
     process.exit(1)
   }
   const code = typeof result.status === "number" ? result.status : 0
-  log("binary exited", { target, status: result.status, signal: result.signal, code })
   process.exit(code)
 }
 
 // Allow override via environment variable
 const envPath = process.env.OPENGIT_BIN_PATH
 if (envPath) {
-  log("using OPENGIT_BIN_PATH", { target: envPath })
   run(envPath)
 }
 
@@ -61,15 +49,6 @@ const base = "opengit-" + platform + "-" + arch
 const scope = "@flat6"
 const binary = platform === "windows" ? "opengit.exe" : "opengit"
 
-log("launcher resolved platform", {
-  scriptPath,
-  scriptDir,
-  platform: os.platform(),
-  arch: os.arch(),
-  package: base,
-  binary,
-})
-
 function findBinary(startDir) {
   let current = startDir
   for (;;) {
@@ -77,14 +56,12 @@ function findBinary(startDir) {
     const scoped = path.join(modules, scope)
     if (fs.existsSync(scoped)) {
       const entries = fs.readdirSync(scoped)
-      log("checking scoped packages", { scoped, count: entries.length })
       for (const entry of entries) {
         if (!entry.startsWith(base)) {
           continue
         }
         const candidate = path.join(scoped, entry, "bin", binary)
         if (fs.existsSync(candidate)) {
-          log("found binary", { candidate })
           return candidate
         }
       }
@@ -99,7 +76,6 @@ function findBinary(startDir) {
 
 const resolved = findBinary(scriptDir)
 if (!resolved) {
-  log("binary not found", { scriptDir, package: base })
   console.error(
     'It seems that your package manager failed to install the right version of opengit for your platform. You can try manually installing the "' +
       scope +

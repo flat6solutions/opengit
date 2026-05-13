@@ -3,7 +3,6 @@ import { createSignal, type Setter } from "solid-js"
 import { createStore } from "solid-js/store"
 import { createSimpleContext } from "./helper"
 import path from "path"
-import { Debug } from "@util/debug"
 
 export const { use: useKV, provider: KVProvider } = createSimpleContext({
   name: "KV",
@@ -12,19 +11,11 @@ export const { use: useKV, provider: KVProvider } = createSimpleContext({
     const [store, setStore] = createStore<Record<string, any>>()
     const file = Bun.file(path.join(Global.Path.state, "kv.json"))
 
-    Debug.log("kv init", { file: file.name })
-
     file
       .json()
-      .then((x) => {
-        Debug.log("kv loaded", { file: file.name })
-        setStore(x)
-      })
-      .catch((error: unknown) => {
-        Debug.error("kv load failed", error)
-      })
+      .then((x) => setStore(x))
+      .catch(() => {})
       .finally(() => {
-        Debug.log("kv ready", { file: file.name })
         setReady(true)
       })
 
