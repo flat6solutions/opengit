@@ -6,7 +6,6 @@ import { Script } from "../packages/script/src/index.ts"
 
 console.log("=== publishing ===\n")
 
-
 const pkgjsons = await Array.fromAsync(
   new Bun.Glob("**/package.json").scan({
     absolute: true,
@@ -23,10 +22,6 @@ for (const file of pkgjsons) {
 
 
 await $`bun install`
-
-
-console.log("\n=== build ===\n")
-await $`bun run scripts/build.ts --all`.cwd("packages/cli")
 
 
 console.log("\n=== cli ===\n")

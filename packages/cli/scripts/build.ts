@@ -79,6 +79,10 @@ const allTargets: {
     arch: "x64",
     avx2: false,
   },
+  {
+    os: "win32",
+    arch: "arm64",
+  },
 ]
 
 const targets = singleFlag
@@ -125,17 +129,18 @@ for (const item of targets) {
   const workerRelativePath = path.relative(dir, parserWorker).replaceAll("\\", "/")
 
   const exeExtension = item.os === "win32" ? ".exe" : ""
+  const outfile = `dist/${name}/bin/opengit${exeExtension}`
 
   const result = await Bun.build({
     conditions: ["browser"],
     tsconfig: "./tsconfig.json",
     plugins: [solidPlugin],
-    sourcemap: "external",
+    sourcemap: process.argv.includes("--sourcemaps") ? "linked" : "none",
     compile: {
       autoloadBunfig: false,
       autoloadDotenv: false,
       target: name.replace(app, "bun").replace("windows", "win32") as any,
-      outfile: `dist/${name}/bin/opengit${exeExtension}`,
+      outfile,
       execArgv: ["--"],
       windows: {},
     },
@@ -154,11 +159,21 @@ for (const item of targets) {
     process.exit(1)
   }
 
+  if (item.os === process.platform && item.arch === process.arch && item.abi === undefined && item.avx2 !== false) {
+    const version = await $`${outfile} --version`.text()
+    console.log(`✓ ${name} smoke test: ${version.trim()}`)
+  }
+
   await Bun.file(`dist/${name}/package.json`).write(
     JSON.stringify(
       {
         name: `${scope}/${name}`,
         version: Script.version,
+        license: "MIT",
+        repository: {
+          type: "git",
+          url: "git+https://github.com/flat6solutions/opengit.git",
+        },
         os: [item.os],
         cpu: [item.arch],
       },

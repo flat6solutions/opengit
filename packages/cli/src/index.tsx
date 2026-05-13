@@ -1,5 +1,12 @@
 import { Debug } from "@util/debug"
 
+declare const OPENGIT_VERSION: string | undefined
+
+if (process.argv.includes("--version") || process.argv.includes("-v")) {
+  console.log(typeof OPENGIT_VERSION === "undefined" ? "dev" : OPENGIT_VERSION)
+  process.exit(0)
+}
+
 Debug.install()
 Debug.log("starting cli", {
   cwd: process.cwd(),

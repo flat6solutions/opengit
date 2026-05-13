@@ -46,6 +46,7 @@ await $`mkdir -p ${mainPkgDir}`
 
 
 await $`cp -r ./bin ${mainPkgDir}/bin`
+await $`cp ./scripts/postinstall.mjs ${mainPkgDir}/postinstall.mjs`
 
 
 await Bun.file(path.join(mainPkgDir, "package.json")).write(
@@ -54,8 +55,16 @@ await Bun.file(path.join(mainPkgDir, "package.json")).write(
       name: pkg,
       version: version,
       description: "A CLI tool for managing Git",
+      license: "MIT",
+      repository: {
+        type: "git",
+        url: "git+https://github.com/flat6solutions/opengit.git",
+      },
       bin: {
         [app]: `./bin/${app}`,
+      },
+      scripts: {
+        postinstall: "bun ./postinstall.mjs || node ./postinstall.mjs",
       },
       optionalDependencies,
     },
