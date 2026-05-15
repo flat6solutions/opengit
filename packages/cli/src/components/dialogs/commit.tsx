@@ -1,4 +1,4 @@
-import { createEffect, createSignal, Show } from "solid-js"
+import { createEffect, createSignal, onCleanup, Show } from "solid-js"
 import { TextareaRenderable, TextAttributes } from "@opentui/core"
 import { useTheme } from "@context/theme"
 import { Git } from "@lib/git"
@@ -31,6 +31,7 @@ export default function CommitDialog({
   const toast = useToast()
 
   let input: TextareaRenderable
+  let disposed = false
 
   const [files, setFiles] = createSignal<Array<string>>([])
   const [commitMessage, setCommitMessage] = createSignal<string>("")
@@ -60,23 +61,31 @@ async function submit() {
   }
 
   async function generateWithAi() {
+    if (generatingMessage()) return
+
     setGeneratingMessage(true)
 
     const diff = await Git.getDiffStaged()
+    if (disposed) return
 
     const p = PROMPT.concat("\n\n").concat(diff.join(""))
 
     const res = await Opencode.prompt(p)
       .then(v => v?.trim().split("\n")[0])
+    if (disposed) return
 
     setGeneratingMessage(false)
     
-    if (res) {
+    if (res && input && !input.isDestroyed) {
       input.setText(res)
       input.cursorOffset = res.length
       setCommitMessage(res)
     }
   }
+
+  onCleanup(() => {
+    disposed = true
+  })
 
   createEffect(() => {
     setup()
@@ -137,7 +146,8 @@ async function submit() {
             ref={(r: TextareaRenderable) => {
               input = r
               setTimeout(() => {
-                if (!input || !input.isDestroyed) return
+                if (!input) return
+                if (input.isDestroyed) return
                 input.focus()
                 input.cursorColor = theme.text
               }, 0)
