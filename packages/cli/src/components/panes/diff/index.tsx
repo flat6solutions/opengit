@@ -106,7 +106,7 @@ export default function Diff() {
                 <diff
                   keyed
                   diff={d}
-                  view="split"
+                  view={app.config.diffView}
                   filetype={diffFiletype()}
                   syntaxStyle={syntax()}
                   showLineNumbers={true}

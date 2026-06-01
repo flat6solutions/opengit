@@ -59,6 +59,9 @@ export default function Keybinds() {
           )}
         </For>
       </box>
+      <box flexDirection="row" gap={2}>
+        <KeybindHelper label="settings" key="open_settings" />
+      </box>
     </box>
   )
 }

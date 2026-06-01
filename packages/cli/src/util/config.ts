@@ -17,6 +17,7 @@ export const KeybindsConfig = z.object({
   trigger_generic_action: z.string().optional().default("<leader>g").describe("Trigger generic action"),
   trigger_sidebar: z.string().optional().default("s").describe("Trigger sidebar"),
   trigger_diff: z.string().optional().default("<leader>d").describe("Trigger diff"),
+  open_settings: z.string().optional().default("ctrl+p").describe("Open settings"),
 })
 
 export type KeybindsConfig = z.infer<typeof KeybindsConfig>

@@ -13,6 +13,7 @@ import { Git } from "@lib/git"
 import Sidebar from "@components/sidebar"
 import Main from "@components/main"
 import ThemesDialog from "@components/dialogs/themes"
+import SettingsDialog from "@components/dialogs/settings"
 
 export function tui() {
   return (
@@ -71,6 +72,11 @@ function App() {
     }
 
     if (dialog.stack.length > 0) return
+
+    if (keybind.match("open_settings", event)) {
+      dialog.replace(() => <SettingsDialog />)
+      return
+    }
 
     if (keybind.match("app_exit", event)) {
       exit()

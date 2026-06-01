@@ -13,6 +13,7 @@ type Config = {
   mainView: View
   keybinds: KeybindsConfig
   aiEnabled: boolean
+  diffView: "unified" | "split"
 }
 
 const File = z.object({
@@ -44,6 +45,7 @@ export const { use: useApplication, provider: ApplicationProvider } = createSimp
         keybinds: KeybindsConfig.parse({}),
         theme: kv.get("theme", "opencode"),
         aiEnabled: false,
+        diffView: kv.get("diffView", "split"),
       },
     })
 
