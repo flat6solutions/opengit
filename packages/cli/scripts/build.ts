@@ -1,7 +1,6 @@
 #!/usr/bin/env bun
 
 import { $ } from "bun"
-import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "url"
 import solidPlugin from "../node_modules/@opentui/solid/scripts/solid-plugin"
@@ -17,6 +16,7 @@ import pkg from "../package.json"
 
 const app = "opengit"
 const scope = "@flat6"
+const treeSitterWorker = await Bun.file(fileURLToPath(import.meta.resolve("@opentui/core/parser.worker"))).text()
 
 const singleFlag = process.argv.includes("--single") || (!!process.env.CI && !process.argv.includes("--all"))
 const baselineFlag = process.argv.includes("--baseline")
@@ -123,10 +123,8 @@ for (const item of targets) {
   console.log(`building ${name}`)
   await $`mkdir -p dist/${name}/bin`
 
-  const parserWorker = fs.realpathSync(path.resolve(dir, "./node_modules/@opentui/core/parser.worker.js"))
-
+  const treeSitterWorkerPath = "opentui-tree-sitter-worker.js"
   const bunfsRoot = item.os === "win32" ? "B:/~BUN/root/" : "/$bunfs/root/"
-  const workerRelativePath = path.relative(dir, parserWorker).replaceAll("\\", "/")
 
   const exeExtension = item.os === "win32" ? ".exe" : ""
   const outfile = `dist/${name}/bin/opengit${exeExtension}`
@@ -144,10 +142,13 @@ for (const item of targets) {
       execArgv: ["--"],
       windows: {},
     },
-    entrypoints: ["./src/index.tsx", parserWorker],
+    files: {
+      [treeSitterWorkerPath]: treeSitterWorker,
+    },
+    entrypoints: ["./src/index.tsx", treeSitterWorkerPath],
     define: {
       OPENGIT_VERSION: `'${Script.version}'`,
-      OTUI_TREE_SITTER_WORKER_PATH: bunfsRoot + workerRelativePath,
+      OTUI_TREE_SITTER_WORKER_PATH: bunfsRoot + treeSitterWorkerPath,
     },
   })
 
