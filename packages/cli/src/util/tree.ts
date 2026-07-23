@@ -15,159 +15,120 @@ export type TreeNode = {
 }
 
 export type FlatNode = TreeNode & {
-  fileIndex: number | null // null for directories, sequential index for files
+  fileIndex: number | null
+  prefix: string
 }
 
-/**
- * Sorts tree nodes alphabetically at each level (directories and files mixed together)
- */
-function sortTreeLevel(nodes: TreeNode[]): void {
-  nodes.sort((a, b) => a.name.localeCompare(b.name))
-  for (const node of nodes) {
-    if (node.children.length > 0) {
-      sortTreeLevel(node.children)
-    }
-  }
+function sort(nodes: TreeNode[]) {
+  nodes.sort((a, b) => {
+    if (a.type !== b.type) return a.type === "directory" ? -1 : 1
+    return a.name.localeCompare(b.name)
+  })
+  nodes.forEach((node) => sort(node.children))
 }
 
-/**
- * Consolidates single-child directory chains into combined paths.
- * e.g., packages -> cli -> src becomes packages/cli/src
- * Only consolidates when a directory has exactly one child that is also a directory.
- */
-function consolidateDirectories(nodes: TreeNode[]): void {
-  for (const node of nodes) {
-    if (node.type !== "directory") continue
-
-    // While this dir has exactly one child that is also a directory, merge them
-    while (
-      node.children.length === 1 &&
-        node.children[0].type === "directory"
-    ) {
+function consolidate(nodes: TreeNode[]) {
+  nodes.forEach((node) => {
+    if (node.type !== "directory") return
+    while (node.children.length === 1 && node.children[0].type === "directory") {
       const child = node.children[0]
-      node.name = node.name + "/" + child.name
+      node.name = `${node.name}/${child.name}`
       node.fullPath = child.fullPath
       node.children = child.children
     }
-
-    // Recurse into children (which may also need consolidating)
-    consolidateDirectories(node.children)
-  }
+    consolidate(node.children)
+  })
 }
 
-/**
- * Recalculates depth values after consolidation since the tree is now shallower.
- */
-function recalculateDepths(nodes: TreeNode[], depth: number = 0): void {
-  for (const node of nodes) {
+function depths(nodes: TreeNode[], depth = 0) {
+  nodes.forEach((node) => {
     node.depth = depth
-    recalculateDepths(node.children, depth + 1)
-  }
+    depths(node.children, depth + 1)
+  })
 }
 
-/**
- * Builds a tree structure from a flat file list.
- * Files are organized into their directory hierarchy.
- */
-export function buildFileTree(files: File[]): TreeNode[] {
+export function buildFileTree(files: File[]) {
   const root: TreeNode[] = []
 
-  for (const file of files) {
-    const parts = file.path.split("/")
-    let currentLevel = root
+  files.forEach((file) => {
+    const parts = file.path.split("/").filter(Boolean)
+    parts.reduce((nodes, name, index) => {
+      const type = index === parts.length - 1 ? "file" : "directory"
+      const fullPath = parts.slice(0, index + 1).join("/")
+      const existing = nodes.find((node) => node.name === name)
+      if (existing) return existing.children
 
-    for (let i = 0; i < parts.length; i++) {
-      const part = parts[i]
-      const isFile = i === parts.length - 1
-      const fullPath = parts.slice(0, i + 1).join("/")
-
-      let existing = currentLevel.find((n) => n.name === part)
-
-      if (!existing) {
-        const node: TreeNode = {
-          name: part,
-          type: isFile ? "file" : "directory",
-          fullPath,
-          children: [],
-          depth: i,
-          ...(isFile && {
-            status: file.status,
-            previousPath: file.previousPath,
-            added: file.added,
-            removed: file.removed,
-          }),
-        }
-        currentLevel.push(node)
-        existing = node
+      const node: TreeNode = {
+        name,
+        type,
+        fullPath,
+        children: [],
+        depth: index,
+        ...(type === "file" && {
+          status: file.status,
+          previousPath: file.previousPath,
+          added: file.added,
+          removed: file.removed,
+        }),
       }
+      nodes.push(node)
+      return node.children
+    }, root)
+  })
 
-      if (!isFile) {
-        currentLevel = existing.children
-      }
-    }
-  }
-
-  // Sort each level alphabetically
-  sortTreeLevel(root)
-
-  // Consolidate single-child directory chains (e.g., packages/cli/src)
-  consolidateDirectories(root)
-
-  // Recalculate depths after consolidation
-  recalculateDepths(root)
-
+  sort(root)
+  consolidate(root)
+  depths(root)
   return root
 }
 
-/**
- * Flattens tree for rendering, assigning sequential fileIndex only to files.
- * Directories get fileIndex: null
- */
-export function flattenTree(nodes: TreeNode[]): FlatNode[] {
+export function flattenTree(nodes: TreeNode[], collapsed: ReadonlySet<string> = new Set()) {
   const result: FlatNode[] = []
   let fileIndex = 0
 
-  function traverse(nodes: TreeNode[]): void {
-    for (const node of nodes) {
-      if (node.type === "file") {
-        result.push({ ...node, fileIndex: fileIndex++ })
-      } else {
-        result.push({ ...node, fileIndex: null })
-        traverse(node.children)
-      }
-    }
-  }
+  const visit = (items: TreeNode[], branches: boolean[] = []) =>
+    items.forEach((node, index) => {
+      const later = index < items.length - 1
+      const indentation = branches
+        .map((branch, depth) => (depth === 0 && nodes.length === 1 ? " " : branch ? "│  " : "   "))
+        .join("")
+      const branch = node.depth === 0 && index === 0 ? " " : later ? "├─ " : "└─ "
+      result.push({ ...node, fileIndex: node.type === "file" ? fileIndex++ : null, prefix: `${indentation}${branch}` })
+      if (node.type === "directory" && !collapsed.has(node.fullPath)) visit(node.children, [...branches, later])
+    })
 
-  traverse(nodes)
+  visit(nodes)
   return result
 }
 
-/**
- * Gets total count of selectable files in the flattened tree
- */
-export function getFileCount(flatNodes: FlatNode[]): number {
-  return flatNodes.filter((n) => n.type === "file").length
+export function treePrefix(node: FlatNode, collapsed: ReadonlySet<string>) {
+  const marker = node.type === "directory" ? (collapsed.has(node.fullPath) ? "▸ " : "▾ ") : ""
+  return `${node.prefix}${marker}`
 }
 
-/**
- * Finds the flat array index for a given file index.
- * Useful for scrolling to the selected item.
- */
-export function flatIndexFromFileIndex(
-  flatNodes: FlatNode[],
-  fileIndex: number
-): number {
-  return flatNodes.findIndex((n) => n.fileIndex === fileIndex)
+export function moveTreeSelection(nodes: FlatNode[], selected: string, offset: number) {
+  if (nodes.length === 0) return ""
+  const index = nodes.findIndex((node) => node.fullPath === selected)
+  if (index < 0) return nodes[0].fullPath
+  return nodes[Math.max(0, Math.min(nodes.length - 1, index + offset))].fullPath
 }
 
-/**
- * Gets the file data (for app.setFile) from a flat node list by file index
- */
-export function getFileByIndex(
-  flatNodes: FlatNode[],
-  fileIndex: number
-): File | null {
-  const node = flatNodes.find((n) => n.fileIndex === fileIndex)
+export function firstTreeChild(nodes: FlatNode[], selected: string) {
+  const index = nodes.findIndex((node) => node.fullPath === selected)
+  const node = nodes[index]
+  const child = nodes[index + 1]
+  if (!node || node.type !== "directory" || !child || child.depth <= node.depth) return selected
+  return child.fullPath
+}
+
+export function treeParent(nodes: FlatNode[], selected: string) {
+  const index = nodes.findIndex((node) => node.fullPath === selected)
+  const node = nodes[index]
+  if (!node || node.depth === 0) return selected
+  return nodes.findLast((item, itemIndex) => itemIndex < index && item.depth < node.depth)?.fullPath ?? selected
+}
+
+export function getFile(node: FlatNode | undefined): File | null {
   if (!node || node.type !== "file") return null
   return {
     status: node.status || "",

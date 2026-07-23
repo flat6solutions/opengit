@@ -10,10 +10,15 @@ import type { File } from "@context/application"
 import { Git } from "@lib/git"
 import { useDialog } from "@ui/dialog"
 import DiscardDialog from "@components/dialogs/discard"
-
-type Row =
-  | { type: "directory"; path: string }
-  | { type: "file"; file: File; fileIndex: number; name: string }
+import {
+  buildFileTree,
+  firstTreeChild,
+  flattenTree,
+  getFile,
+  moveTreeSelection,
+  treeParent,
+  treePrefix,
+} from "@util/tree"
 
 export default function Files() {
   const app = useApplication()
@@ -21,29 +26,31 @@ export default function Files() {
   const theme = useTheme().theme
   const keybind = useKeybind()
   const active = () => app.config.activePane === "files"
+  const restorePath = app.file.path
 
   const [files, setFiles] = createSignal<Array<File>>([])
-  const [selected, setSelected] = createSignal(0)
+  const [highlighted, setHighlighted] = createSignal(restorePath)
+  const [collapsed, setCollapsed] = createSignal<ReadonlySet<string>>(new Set())
   const [loaded, setLoaded] = createSignal(false)
-  const restorePath = app.file.path
 
   let fileListScrollbox: ScrollBoxRenderable | undefined
 
-  const rows = createMemo(() =>
-    files().flatMap((file, index, list): Row[] => {
-      const parts = file.path.split("/")
-      const path = parts.slice(0, -1).join("/")
-      const previous = list[index - 1]
-      const previousPath = previous ? previous.path.split("/").slice(0, -1).join("/") : undefined
-      const row = { type: "file" as const, file, fileIndex: index, name: parts[parts.length - 1] }
-
-      if (path === previousPath) return [row]
-      if (!path) return [row]
-      return [{ type: "directory", path }, row]
-    }),
+  const tree = createMemo(() => buildFileTree(files()))
+  const rows = createMemo(() => flattenTree(tree(), collapsed()))
+  const allRows = createMemo(() => flattenTree(tree()))
+  const fileCount = createMemo(() => files().length)
+  const selected = createMemo(() =>
+    allRows()
+      .filter((node) => node.type === "file")
+      .findIndex((node) => node.fullPath === highlighted()),
   )
 
-  const fileCount = createMemo(() => files().length)
+  const toggle = (path: string) => {
+    const next = new Set(collapsed())
+    if (next.has(path)) next.delete(path)
+    else next.add(path)
+    setCollapsed(next)
+  }
 
   async function getFiles() {
     const out = await Bun.$`git status --porcelain -z --untracked-files=all --find-renames=50%`.quiet().nothrow()
@@ -75,12 +82,22 @@ export default function Files() {
       }),
     )
     const sorted = counted.sort((a, b) => a.path.localeCompare(b.path))
+    const previous = rows()
+    const previousIndex = previous.findIndex((node) => node.fullPath === highlighted())
     setFiles(sorted)
+    const focused = rows().find((node) => node.type === "file" && node.fullPath === highlighted())
+    const current = allRows().find((node) => node.type === "file" && node.fullPath === app.file.path)
+    const first = allRows().find((node) => node.type === "file")
+    app.setFile(getFile(focused ?? current ?? first) ?? { status: "", path: "" })
     if (!loaded()) {
-      const idx = restorePath ? sorted.findIndex((f) => f.path === restorePath) : -1
-      if (idx >= 0) setSelected(idx)
+      const restored = allRows().find((node) => node.fullPath === restorePath && node.type === "file")
+      setHighlighted(restored?.fullPath ?? first?.fullPath ?? "")
       setLoaded(true)
+      return
     }
+
+    if (rows().some((node) => node.fullPath === highlighted())) return
+    setHighlighted(rows()[Math.max(0, Math.min(rows().length - 1, previousIndex))]?.fullPath ?? "")
   }
 
   useKeyboard(async (event) => {
@@ -88,19 +105,43 @@ export default function Files() {
     if (app.config.activePane !== "files") return
 
     if (keybind.match("next", event)) {
-      if (selected() >= fileCount() - 1) return
-      setSelected(selected() + 1)
+      setHighlighted(moveTreeSelection(rows(), highlighted(), 1))
       return
     }
 
     if (keybind.match("previous", event)) {
-      if (selected() <= 0) return
-      setSelected(selected() - 1)
+      setHighlighted(moveTreeSelection(rows(), highlighted(), -1))
+      return
+    }
+
+    const node = rows().find((node) => node.fullPath === highlighted())
+
+    if (keybind.match("tree_expand", event)) {
+      if (node?.type !== "directory") return
+      if (collapsed().has(node.fullPath)) {
+        toggle(node.fullPath)
+        return
+      }
+      setHighlighted(firstTreeChild(rows(), node.fullPath))
+      return
+    }
+
+    if (keybind.match("tree_collapse", event)) {
+      if (node?.type === "directory" && !collapsed().has(node.fullPath)) {
+        toggle(node.fullPath)
+        return
+      }
+      setHighlighted(treeParent(rows(), highlighted()))
+      return
+    }
+
+    if (keybind.match("confirm", event) && node?.type === "directory") {
+      toggle(node.fullPath)
       return
     }
 
     if (keybind.match("discard_file", event)) {
-      const file = files()[selected()]
+      const file = getFile(node)
       if (!file) return
       dialog.replace(() => (
         <DiscardDialog
@@ -131,10 +172,12 @@ export default function Files() {
     }
 
     if (keybind.match("stage_unstage_file", event)) {
-      if (Git.isFileStaged(app.file.status)) {
-        await Git.unstageFile(app.file.path)
+      const file = getFile(node)
+      if (!file) return
+      if (Git.isFileStaged(file.status)) {
+        await Git.unstageFile(file.path)
       } else {
-        await Git.stageFile(app.file.path)
+        await Git.stageFile(file.path)
       }
 
       await getFiles()
@@ -143,30 +186,23 @@ export default function Files() {
   })
 
   createEffect(() => {
-    const count = fileCount()
-    if (count === 0) {
-      setSelected(0)
-    } else if (selected() >= count) {
-      setSelected(count - 1)
-    }
-  })
-
-  createEffect(() => {
     if (!loaded()) return
-    if (fileCount() > 0) {
-      const file = files()[selected()] || { status: "", path: "" }
+    const file = getFile(rows().find((node) => node.fullPath === highlighted()))
+    if (file) {
       app.setFile(file)
-    } else {
+      return
+    }
+    if (fileCount() === 0) {
       app.setFile({ status: "", path: "" })
     }
   })
 
   createEffect(() => {
-    selected()
+    highlighted()
     const scrollbox = fileListScrollbox
     if (!scrollbox) return
 
-    const selectedRowIndex = rows().findIndex((row) => row.type === "file" && row.fileIndex === selected())
+    const selectedRowIndex = rows().findIndex((row) => row.fullPath === highlighted())
     if (selectedRowIndex < 0) return
 
     const viewportHeight = Math.max(1, scrollbox.viewport.height)
@@ -199,7 +235,7 @@ export default function Files() {
   return (
     <Pane
       borderColor={theme.border}
-      subtitle={files().length > 0 ? `${selected() + 1}/${fileCount().toString()}` : undefined}
+      subtitle={selected() >= 0 ? `${selected() + 1}/${fileCount().toString()}` : undefined}
       active={active()}
       open={active()}
       fill={active()}
@@ -221,41 +257,34 @@ export default function Files() {
           >
             <For each={rows()}>
               {(row) => {
-                if (row.type === "directory") {
-                  return (
-                    <box
-                      flexDirection="row"
-                      backgroundColor={theme.backgroundPanel}
-                      paddingLeft={1}
-                      paddingRight={1}
-                      height={1}
-                    >
-                      <text fg={theme.textMuted} wrapMode="none" truncate={true}>
-                        {row.path}/
-                      </text>
-                    </box>
-                  )
-                }
-
                 return (
                   <box
                     flexDirection="row"
                     justifyContent="space-between"
-                    backgroundColor={row.fileIndex === selected() ? theme.border : theme.backgroundPanel}
+                    backgroundColor={row.fullPath === highlighted() ? theme.border : theme.backgroundPanel}
                     paddingLeft={1}
                     paddingRight={1}
                     height={1}
+                    onMouseUp={() => {
+                      setHighlighted(row.fullPath)
+                      if (row.type === "directory") toggle(row.fullPath)
+                    }}
                   >
-                    <box flexDirection="row" gap={2} flexGrow={1}>
-                      <text fg={getNameStatusColor(row.file.status || "")}>{row.file.status}</text>
-                      <text fg={theme.text} wrapMode="none" truncate={true}>
+                    <box flexDirection="row" flexGrow={1} minWidth={0}>
+                      <text fg={theme.textMuted} wrapMode="none" flexShrink={0}>
+                        {treePrefix(row, collapsed())}
+                      </text>
+                      <text fg={row.type === "directory" ? theme.textMuted : theme.text} wrapMode="none" truncate>
                         {row.name}
                       </text>
                     </box>
-                    <box flexDirection="row" gap={1}>
-                      {(row.file.added || 0) > 0 && <text fg={theme.success}>+{row.file.added}</text>}
-                      {(row.file.removed || 0) > 0 && <text fg={theme.error}>-{row.file.removed}</text>}
-                    </box>
+                    <Show when={row.type === "file"}>
+                      <box flexDirection="row" gap={1} flexShrink={0}>
+                        {(row.added || 0) > 0 && <text fg={theme.success}>+{row.added}</text>}
+                        {(row.removed || 0) > 0 && <text fg={theme.error}>-{row.removed}</text>}
+                        <text fg={getNameStatusColor(row.status || "")}>{row.status}</text>
+                      </box>
+                    </Show>
                   </box>
                 )
               }}

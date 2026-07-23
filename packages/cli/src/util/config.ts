@@ -7,6 +7,8 @@ export const KeybindsConfig = z.object({
   debug_toggle: z.string().optional().default("ctrl+d").describe("Toggle debug mode"),
   next: z.string().optional().default("j,down").describe("Next object"),
   previous: z.string().optional().default("k,up").describe("Previous object"),
+  tree_expand: z.string().optional().default("right").describe("Expand tree item"),
+  tree_collapse: z.string().optional().default("left").describe("Collapse tree item"),
   discard_file: z.string().optional().default("d").describe("Discard file"),
   discard_all_files: z.string().optional().default("shift+d").describe("Discard all files"),
   stage_unstage_file: z.string().optional().default("space").describe("Stage/Unstage file"),
