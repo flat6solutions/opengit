@@ -22,9 +22,7 @@ Generate a conventional commit message for the staged changes.
 - Return only the message, nothing else
 `
 
-export default function CommitDialog({
-  onConfirm,
-}: DiscardDialogProps) {
+export default function CommitDialog({ onConfirm }: DiscardDialogProps) {
   const app = useApplication()
   const theme = useTheme().theme
   const keybind = useKeybind()
@@ -43,8 +41,9 @@ export default function CommitDialog({
     setFiles(stagedFiles)
   }
 
-async function submit() {
-    if (loading()) return
+  async function submit() {
+    if (loading() || generatingMessage()) return
+    if (files().length === 0) return
     if (commitMessage().trim() === "") return
 
     setLoading(true)
@@ -61,26 +60,36 @@ async function submit() {
   }
 
   async function generateWithAi() {
-    if (generatingMessage()) return
+    if (generatingMessage() || loading()) return
+    if (files().length === 0) return
 
     setGeneratingMessage(true)
+    if (input && !input.isDestroyed) {
+      input.focusable = false
+      input.blur()
+    }
 
     const diff = await Git.getDiffStaged()
     if (disposed) return
 
     const p = PROMPT.concat("\n\n").concat(diff.join(""))
 
-    const res = await Opencode.prompt(p)
-      .then(v => v?.trim().split("\n")[0])
+    const res = await Opencode.prompt(p).then((v) => v?.trim().split("\n")[0])
     if (disposed) return
 
     setGeneratingMessage(false)
-    
+
     if (res && input && !input.isDestroyed) {
       input.setText(res)
       input.cursorOffset = res.length
       setCommitMessage(res)
     }
+
+    setTimeout(() => {
+      if (!input || input.isDestroyed) return
+      input.focusable = true
+      input.focus()
+    }, 0)
   }
 
   onCleanup(() => {
@@ -91,8 +100,14 @@ async function submit() {
     setup()
   })
 
-  useKeyboard(key => {
-    if (files() && app.config.aiEnabled && keybind.match("trigger_generic_action", key)) {
+  useKeyboard((key) => {
+    if (
+      files().length > 0 &&
+      !generatingMessage() &&
+      !loading() &&
+      app.config.aiEnabled &&
+      keybind.match("trigger_generic_action", key)
+    ) {
       generateWithAi()
       return
     }
@@ -105,10 +120,7 @@ async function submit() {
   })
 
   return (
-    <box
-      paddingBottom={1}
-      gap={1}
-    >
+    <box paddingBottom={1} gap={1}>
       <box
         flexDirection="row"
         alignItems="center"
@@ -118,24 +130,22 @@ async function submit() {
         paddingRight={4}
         marginBottom={1}
       >
-        <text fg={theme.text} attributes={TextAttributes.BOLD}>Commit files</text>
+        <text fg={theme.text} attributes={TextAttributes.BOLD}>
+          Commit files
+        </text>
         <text fg={theme.textMuted}>esc</text>
       </box>
-      <box
-        paddingLeft={4}
-        paddingRight={4}
-        marginBottom={1}
-        flexDirection="column"
-        gap={1}
-      >
+      <box paddingLeft={4} paddingRight={4} marginBottom={1} flexDirection="column" gap={1}>
         <Show when={files().length === 0}>
-          <text fg={theme.textMuted}>No files to be commited</text>
+          <text fg={theme.textMuted}>No files to be committed</text>
         </Show>
         <Show when={files().length > 0}>
           <textarea
-            focused
-            placeholder={generatingMessage() ? "generating message with ai..." : "commit message..."}
-            focusedTextColor={theme.text}
+            focused={!generatingMessage()}
+            placeholder={generatingMessage() ? "" : "commit message..."}
+            textColor={generatingMessage() ? theme.textMuted : theme.text}
+            focusedTextColor={generatingMessage() ? theme.textMuted : theme.text}
+            showCursor={!generatingMessage()}
             minHeight={1}
             maxHeight={6}
             onContentChange={() => {
@@ -157,11 +167,13 @@ async function submit() {
           />
           <Show when={app.config.aiEnabled}>
             <box flexDirection="row" gap={1}>
-              <text fg={theme.text}>{keybind.print("trigger_generic_action")}</text>
-              <text fg={theme.textMuted}>generate message with ai</text>
-              <Show when={generatingMessage()}>
+              <Show
+                when={generatingMessage()}
+                fallback={<text fg={theme.text}>{keybind.print("trigger_generic_action")}</text>}
+              >
                 <Spinner />
               </Show>
+              <text fg={theme.textMuted}>generate message with ai</text>
             </box>
           </Show>
         </Show>
@@ -175,11 +187,13 @@ async function submit() {
         justifyContent="flex-end"
         gap={1}
       >
-        <Show when={loading()}>
-          <Spinner />
+        <Show when={files().length > 0}>
+          <Show when={loading()}>
+            <Spinner />
+          </Show>
+          <text fg={generatingMessage() || loading() ? theme.textMuted : theme.text}>enter</text>
+          <text fg={theme.textMuted}>confirm</text>
         </Show>
-        <text fg={theme.text}>enter</text>
-        <text fg={theme.textMuted}>confirm</text>
       </box>
     </box>
   )
