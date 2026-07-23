@@ -166,15 +166,21 @@ function App() {
             }
           >
             <box flexDirection="row" gap={1}>
-              <text fg={theme.theme.success} wrapMode="none">
-                +{changes().added}
-              </text>
-              <text fg={theme.theme.error} wrapMode="none">
-                -{changes().removed}
-              </text>
-              <text fg={theme.theme.textMuted} wrapMode="none">
-                {`${count()} ${count() === 1 ? "file" : "files"}`}
-              </text>
+              <Show when={changes().added > 0}>
+                <text fg={theme.theme.success} wrapMode="none">
+                  +{changes().added}
+                </text>
+              </Show>
+              <Show when={changes().removed > 0}>
+                <text fg={theme.theme.error} wrapMode="none">
+                  -{changes().removed}
+                </text>
+              </Show>
+              <Show when={count() > 0}>
+                <text fg={theme.theme.textMuted} wrapMode="none">
+                  {`${count()} ${count() === 1 ? "file" : "files"}`}
+                </text>
+              </Show>
             </box>
           </Show>
         </box>
