@@ -58,8 +58,20 @@ export namespace Git {
   }
 
   export function isFileStaged(status: string) {
-    if (status.endsWith(" ")) return true
-    return false
+    if (["DD", "AU", "UD", "UA", "DU", "AA", "UU"].includes(status)) return false
+    return ["M", "A", "D", "R", "C", "T"].includes(status[0] ?? "")
+  }
+
+  export async function getDiffAll(path: string, status: string) {
+    if (status === "??") return getDiff(path, status)
+
+    const root = await getGitRoot()
+    return (
+      await Promise.all([
+        isFileStaged(status) ? Bun.$`git -C ${root} diff -U0 --cached -- ${path}`.quiet().nothrow().text() : "",
+        status[1] !== " " ? Bun.$`git -C ${root} diff -U0 -- ${path}`.quiet().nothrow().text() : "",
+      ])
+    ).join("\n")
   }
 
   export async function stageFile(path: string) {

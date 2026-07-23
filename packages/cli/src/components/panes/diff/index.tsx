@@ -67,20 +67,31 @@ export default function Diff() {
 
   createEffect(
     on(
+      () => [app.file.path, app.file.status],
+      () => {
+        const file = app.file
+        if (file.path) {
+          refreshDiff(file)
+          return
+        }
+        setDiff("")
+      },
+    ),
+  )
+
+  createEffect(
+    on(
       () => app.file.path,
       () => {
         const file = app.file
-        if (file && file.path) {
-          refreshDiff(file)
+        if (file.path) {
           setup(file)
-        } else {
-          setDiff("")
-          const existing = watchedPath()
-          if (existing) {
-            unwatchFile(existing)
-            setWatchedPath(null)
-          }
+          return
         }
+        const existing = watchedPath()
+        if (!existing) return
+        unwatchFile(existing)
+        setWatchedPath(null)
       },
     ),
   )

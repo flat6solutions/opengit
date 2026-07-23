@@ -94,7 +94,7 @@ export const { use: useApplication, provider: ApplicationProvider } = createSimp
             await Promise.all(
               files.map(async (file) => ({
                 ...file,
-                ...Git.getLineCounts(await Git.getDiff(file.path, file.status)),
+                ...Git.getLineCounts(await Git.getDiffAll(file.path, file.status)),
               })),
             )
           ).sort((a, b) => a.path.localeCompare(b.path)),
