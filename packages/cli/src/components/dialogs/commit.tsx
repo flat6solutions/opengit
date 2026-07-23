@@ -142,7 +142,7 @@ export default function CommitDialog({ onConfirm }: DiscardDialogProps) {
         <Show when={files().length > 0}>
           <textarea
             focused={!generatingMessage()}
-            placeholder={generatingMessage() ? "" : "commit message..."}
+            placeholder="commit message..."
             textColor={generatingMessage() ? theme.textMuted : theme.text}
             focusedTextColor={generatingMessage() ? theme.textMuted : theme.text}
             showCursor={!generatingMessage()}
@@ -173,7 +173,9 @@ export default function CommitDialog({ onConfirm }: DiscardDialogProps) {
               >
                 <Spinner />
               </Show>
-              <text fg={theme.textMuted}>generate message with ai</text>
+              <text fg={theme.textMuted}>
+                {generatingMessage() ? "generating message with ai" : "generate message with ai"}
+              </text>
             </box>
           </Show>
         </Show>
