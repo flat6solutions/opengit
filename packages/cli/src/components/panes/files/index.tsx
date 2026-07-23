@@ -1,12 +1,11 @@
-import { createEffect, createMemo, createSignal, onMount, onCleanup, For, Show } from "solid-js"
+import { createEffect, createMemo, createSignal, For, Show, untrack } from "solid-js"
 import type { ScrollBoxRenderable } from "@opentui/core"
 import { useKeybind } from "@context/keybind"
-import { useTheme } from "@context/theme"
+import { tint, useTheme } from "@context/theme"
 import { useKeyboard } from "@opentui/solid"
 import { getNameStatusColor } from "@util/color"
 import { Pane } from "@ui/pane"
 import { useApplication } from "@context/application"
-import type { File } from "@context/application"
 import { Git } from "@lib/git"
 import { useDialog } from "@ui/dialog"
 import DiscardDialog from "@components/dialogs/discard"
@@ -20,21 +19,23 @@ import {
   treePrefix,
 } from "@util/tree"
 
-export default function Files() {
+export default function Files(props: { visible: boolean }) {
   const app = useApplication()
   const dialog = useDialog()
   const theme = useTheme().theme
   const keybind = useKeybind()
   const active = () => app.config.activePane === "files"
+  const faded = () => tint(theme.text, theme.background, 0.75)
   const restorePath = app.file.path
 
-  const [files, setFiles] = createSignal<Array<File>>([])
   const [highlighted, setHighlighted] = createSignal(restorePath)
   const [collapsed, setCollapsed] = createSignal<ReadonlySet<string>>(new Set())
   const [loaded, setLoaded] = createSignal(false)
 
   let fileListScrollbox: ScrollBoxRenderable | undefined
+  let previous: string[] = []
 
+  const files = () => app.files
   const tree = createMemo(() => buildFileTree(files()))
   const rows = createMemo(() => flattenTree(tree(), collapsed()))
   const allRows = createMemo(() => flattenTree(tree()))
@@ -52,56 +53,9 @@ export default function Files() {
     setCollapsed(next)
   }
 
-  async function getFiles() {
-    const out = await Bun.$`git status --porcelain -z --untracked-files=all --find-renames=50%`.quiet().nothrow()
-    const text = out.text()
-
-    const entries = text.split("\x00").filter(Boolean)
-
-    const files: Array<{ status: string; path: string; previousPath?: string }> = []
-
-    for (let i = 0; i < entries.length; i++) {
-      const entry = entries[i]
-
-      const status = entry.slice(0, 2)
-      const path = entry.slice(3)
-
-      if (status.startsWith("R") || status.startsWith("C")) {
-        const previousPath = entries[i + 1]
-        files.push({ status, path, previousPath })
-        i++
-      } else {
-        files.push({ status, path })
-      }
-    }
-
-    const counted = await Promise.all(
-      files.map(async (file) => {
-        const counts = Git.getLineCounts(await Git.getDiff(file.path, file.status))
-        return { ...file, ...counts }
-      }),
-    )
-    const sorted = counted.sort((a, b) => a.path.localeCompare(b.path))
-    const previous = rows()
-    const previousIndex = previous.findIndex((node) => node.fullPath === highlighted())
-    setFiles(sorted)
-    const focused = rows().find((node) => node.type === "file" && node.fullPath === highlighted())
-    const current = allRows().find((node) => node.type === "file" && node.fullPath === app.file.path)
-    const first = allRows().find((node) => node.type === "file")
-    app.setFile(getFile(focused ?? current ?? first) ?? { status: "", path: "" })
-    if (!loaded()) {
-      const restored = allRows().find((node) => node.fullPath === restorePath && node.type === "file")
-      setHighlighted(restored?.fullPath ?? first?.fullPath ?? "")
-      setLoaded(true)
-      return
-    }
-
-    if (rows().some((node) => node.fullPath === highlighted())) return
-    setHighlighted(rows()[Math.max(0, Math.min(rows().length - 1, previousIndex))]?.fullPath ?? "")
-  }
-
   useKeyboard(async (event) => {
     if (dialog.stack.length > 0) return
+    if (!props.visible) return
     if (app.config.activePane !== "files") return
 
     if (keybind.match("next", event)) {
@@ -147,7 +101,7 @@ export default function Files() {
         <DiscardDialog
           file={file}
           onConfirm={async () => {
-            await getFiles()
+            await app.refreshFiles()
             dialog.clear()
           }}
           onCancel={() => {}}
@@ -162,7 +116,7 @@ export default function Files() {
         <DiscardDialog
           all
           onConfirm={async () => {
-            await getFiles()
+            await app.refreshFiles()
             dialog.clear()
           }}
           onCancel={() => {}}
@@ -180,21 +134,40 @@ export default function Files() {
         await Git.stageFile(file.path)
       }
 
-      await getFiles()
+      await app.refreshFiles()
       return
     }
   })
 
   createEffect(() => {
-    if (!loaded()) return
-    const file = getFile(rows().find((node) => node.fullPath === highlighted()))
-    if (file) {
-      app.setFile(file)
+    const next = rows()
+    const all = allRows()
+    const path = highlighted()
+    if (!app.filesLoaded) return
+
+    const index = previous.indexOf(path)
+    previous = next.map((node) => node.fullPath)
+    const first = all.find((node) => node.type === "file")
+
+    if (!loaded()) {
+      const restored = all.find((node) => node.fullPath === restorePath && node.type === "file")
+      const target = restored ?? first
+      setHighlighted(target?.fullPath ?? "")
+      app.setFile(getFile(target) ?? { status: "", path: "" })
+      setLoaded(true)
       return
     }
-    if (fileCount() === 0) {
-      app.setFile({ status: "", path: "" })
+
+    const visible = next.find((node) => node.fullPath === path)
+    if (!visible) {
+      const target = next[Math.max(0, Math.min(next.length - 1, index))]
+      setHighlighted(target?.fullPath ?? "")
+      app.setFile(getFile(target) ?? getFile(first) ?? { status: "", path: "" })
+      return
     }
+
+    const current = all.find((node) => node.type === "file" && node.fullPath === untrack(() => app.file.path))
+    app.setFile(getFile(visible) ?? getFile(current) ?? getFile(first) ?? { status: "", path: "" })
   })
 
   createEffect(() => {
@@ -226,23 +199,17 @@ export default function Files() {
     }
   })
 
-  onMount(() => {
-    getFiles()
-    const interval = setInterval(getFiles, 1000)
-    onCleanup(() => clearInterval(interval))
-  })
-
   return (
     <Pane
-      borderColor={theme.border}
       subtitle={selected() >= 0 ? `${selected() + 1}/${fileCount().toString()}` : undefined}
       active={active()}
       open={active()}
       fill={active()}
       flexGrow={active() ? 1 : 0}
+      contentPadding={0}
     >
       <box width="100%" height="100%">
-        <Show when={files().length === 0}>
+        <Show when={app.filesLoaded && !app.filesError && files().length === 0}>
           <box paddingLeft={1} paddingRight={1}>
             <text fg={theme.textMuted}>Working directory clean</text>
           </box>
@@ -261,7 +228,7 @@ export default function Files() {
                   <box
                     flexDirection="row"
                     justifyContent="space-between"
-                    backgroundColor={row.fullPath === highlighted() ? theme.border : theme.backgroundPanel}
+                    backgroundColor={row.fullPath === highlighted() ? theme.primary : theme.background}
                     paddingLeft={1}
                     paddingRight={1}
                     height={1}
@@ -271,19 +238,38 @@ export default function Files() {
                     }}
                   >
                     <box flexDirection="row" flexGrow={1} minWidth={0}>
-                      <text fg={theme.textMuted} wrapMode="none" flexShrink={0}>
+                      <text
+                        fg={row.fullPath === highlighted() ? theme.background : faded()}
+                        wrapMode="none"
+                        flexShrink={0}
+                      >
                         {treePrefix(row, collapsed())}
                       </text>
-                      <text fg={row.type === "directory" ? theme.textMuted : theme.text} wrapMode="none" truncate>
+                      <text
+                        fg={
+                          row.fullPath === highlighted()
+                            ? theme.background
+                            : row.type === "directory"
+                              ? theme.textMuted
+                              : theme.text
+                        }
+                        wrapMode="none"
+                        truncate
+                      >
                         {row.name}
                       </text>
                     </box>
                     <Show when={row.type === "file"}>
-                      <box flexDirection="row" gap={1} flexShrink={0}>
-                        {(row.added || 0) > 0 && <text fg={theme.success}>+{row.added}</text>}
-                        {(row.removed || 0) > 0 && <text fg={theme.error}>-{row.removed}</text>}
-                        <text fg={getNameStatusColor(row.status || "")}>{row.status}</text>
-                      </box>
+                      <text
+                        flexShrink={0}
+                        fg={
+                          row.fullPath === highlighted()
+                            ? theme.background
+                            : getNameStatusColor(row.status || "")
+                        }
+                      >
+                        {row.status}
+                      </text>
                     </Show>
                   </box>
                 )

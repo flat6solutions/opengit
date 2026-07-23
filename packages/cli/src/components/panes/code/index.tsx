@@ -86,15 +86,8 @@ export default function Diff() {
   })
 
   return (
-    <Pane borderColor={theme.backgroundPanel} title="File" subtitle={subtitle()}>
-      <box
-        width="100%"
-        height="100%"
-        paddingLeft={1}
-        paddingRight={1}
-        flexDirection="column"
-        gap={1}
-      >
+    <Pane title={app.file.path} subtitle={subtitle()} contentPadding={0}>
+      <box width="100%" height="100%" flexDirection="column" gap={1}>
         <Show when={!code()} keyed>
           <box>
             <text fg={theme.textMuted}>No changes to display</text>

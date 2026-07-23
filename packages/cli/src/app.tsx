@@ -4,15 +4,22 @@ import { ThemeProvider, useTheme } from "@context/theme"
 import { KeybindProvider, useKeybind } from "@context/keybind"
 import { Clipboard } from "@util/clipboard"
 import { useKeyboard, useRenderer } from "@opentui/solid"
+import { TextAttributes } from "@opentui/core"
 import { useDialog, DialogProvider } from "@ui/dialog"
 import { Toast, ToastProvider, useToast } from "@context/toast"
 import Keybinds from "@components/keybinds"
-import { onMount } from "solid-js"
+import { createMemo, createSignal, Show, onMount } from "solid-js"
 import { Opencode } from "@lib/opencode"
 import { Git } from "@lib/git"
 import Sidebar from "@components/sidebar"
 import Main from "@components/main"
 import ThemesDialog from "@components/dialogs/themes"
+import SettingsDialog from "@components/dialogs/settings"
+import { Frame } from "@ui/frame"
+
+declare const OPENGIT_VERSION: string | undefined
+
+export const version = typeof OPENGIT_VERSION === "undefined" ? "dev" : OPENGIT_VERSION
 
 export function tui() {
   return (
@@ -39,6 +46,17 @@ function App() {
   const dialog = useDialog()
   const app = useApplication()
   const toast = useToast()
+  const [sidebar, setSidebar] = createSignal(true)
+  const count = () => app.files.length
+  const changes = createMemo(() =>
+    app.files.reduce(
+      (total, file) => ({
+        added: total.added + (file.added ?? 0),
+        removed: total.removed + (file.removed ?? 0),
+      }),
+      { added: 0, removed: 0 },
+    ),
+  )
 
   function exit() {
     Opencode.closeClient()
@@ -72,6 +90,24 @@ function App() {
 
     if (dialog.stack.length > 0) return
 
+    if (keybind.match("settings_open", event)) {
+      dialog.replace(() => <SettingsDialog />)
+      return
+    }
+
+    if (keybind.match("diff_view_toggle", event)) {
+      app.setDiffView(app.config.diffView === "split" ? "unified" : "split").catch((error) => {
+        toast.show({ message: "Failed to save diff view", variant: "error" })
+        console.error("Failed to save diff view", error)
+      })
+      return
+    }
+
+    if (keybind.match("trigger_sidebar", event)) {
+      setSidebar(!sidebar())
+      return
+    }
+
     if (keybind.match("app_exit", event)) {
       exit()
     }
@@ -104,12 +140,47 @@ function App() {
           }
         }}
       >
-        <box flexDirection="row" flexGrow={1}>
-          <box flexGrow={1} flexDirection="row">
-            <Sidebar />
-            <Main />
+        <box
+          height={1}
+          flexShrink={0}
+          flexDirection="row"
+          alignItems="center"
+          justifyContent="space-between"
+          paddingLeft={1}
+          paddingRight={1}
+        >
+          <box flexDirection="row">
+            <text fg={theme.theme.text} attributes={TextAttributes.BOLD} wrapMode="none">
+              OpenGit
+            </text>
+            <text fg={theme.theme.textMuted} wrapMode="none">
+              {` ${version === "dev" ? version : `v${version}`}`}
+            </text>
           </box>
+          <Show
+            when={app.filesLoaded && !app.filesError}
+            fallback={
+              <text fg={theme.theme.textMuted} wrapMode="none">
+                {app.filesError ? "Unavailable" : "Loading..."}
+              </text>
+            }
+          >
+            <box flexDirection="row" gap={1}>
+              <text fg={theme.theme.success} wrapMode="none">
+                +{changes().added}
+              </text>
+              <text fg={theme.theme.error} wrapMode="none">
+                -{changes().removed}
+              </text>
+              <text fg={theme.theme.textMuted} wrapMode="none">
+                {`${count()} ${count() === 1 ? "file" : "files"}`}
+              </text>
+            </box>
+          </Show>
         </box>
+        <Frame sidebar={sidebar()} side={<Sidebar visible={sidebar()} />}>
+          <Main />
+        </Frame>
         <Keybinds />
       </box>
     </>

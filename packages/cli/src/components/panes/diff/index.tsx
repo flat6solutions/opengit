@@ -92,8 +92,8 @@ export default function Diff() {
   })
 
   return (
-    <Pane title={app.file.path} borderColor={theme.border} subtitle={subtitle()}>
-      <box width="100%" height="100%" paddingLeft={1} paddingRight={1} flexDirection="column" gap={1}>
+    <Pane title={app.file.path} subtitle={subtitle()} contentPadding={0}>
+      <box width="100%" height="100%" flexDirection="column" gap={1}>
         <Show when={!diff()} keyed>
           <box>
             <text fg={theme.textMuted}>No changes to display</text>
@@ -106,7 +106,8 @@ export default function Diff() {
                 <diff
                   keyed
                   diff={d}
-                  view="split"
+                  view={app.config.diffView}
+                  wrapMode={app.config.diffWrap ? "word" : "none"}
                   filetype={diffFiletype()}
                   syntaxStyle={syntax()}
                   showLineNumbers={true}
@@ -116,13 +117,13 @@ export default function Diff() {
                   addedBg="#1F3025"
                   // removedBg={theme.diffRemovedBg}
                   removedBg="#372526"
-                  contextBg={theme.diffContextBg}
+                  contextBg={theme.background}
                   // addedSignColor={theme.diffHighlightAdded}
                   addedSignColor="#88d39b"
                   // removedSignColor={theme.diffHighlightRemoved}
                   removedSignColor="#f0a0a0"
                   lineNumberFg={theme.diffLineNumber}
-                  lineNumberBg={theme.diffContextBg}
+                  lineNumberBg={theme.background}
                   // addedLineNumberBg={theme.diffAddedLineNumberBg}
                   addedLineNumberBg="#1F3025"
                   // removedLineNumberBg={theme.diffRemovedLineNumberBg}

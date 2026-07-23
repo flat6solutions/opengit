@@ -376,7 +376,7 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
       },
       setMode(mode: "dark" | "light") {
         setStore("mode", mode)
-        kv.set("theme_mode", mode)
+        return kv.set("theme_mode", mode)
       },
       async set(theme: string) {
         setStore("active", theme)

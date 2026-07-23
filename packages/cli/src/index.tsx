@@ -1,11 +1,9 @@
 import { ConsolePosition } from "@opentui/core"
 import { render } from "@opentui/solid"
-import { tui } from "./app"
-
-declare const OPENGIT_VERSION: string | undefined
+import { tui, version } from "./app"
 
 if (process.argv.includes("--version") || process.argv.includes("-v")) {
-  console.log(typeof OPENGIT_VERSION === "undefined" ? "dev" : OPENGIT_VERSION)
+  console.log(version)
   process.exit(0)
 }
 

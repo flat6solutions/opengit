@@ -1,85 +1,87 @@
-import { RGBA, TextAttributes } from "@opentui/core"
 import type { BoxProps } from "@opentui/solid"
-import { createEffect, createSignal, splitProps, type Accessor, type JSX } from "solid-js"
-import { SplitBorder } from "@util/border"
+import { splitProps, type JSX } from "solid-js"
 import { useTheme } from "@context/theme"
 
-interface PaneProps extends Omit<BoxProps, "borderColor"> {
+interface PaneProps extends BoxProps {
   children?: JSX.Element
   title?: string
   subtitle?: string | JSX.Element
-  borderColor?: Accessor<RGBA | undefined> | string | RGBA
   active?: boolean
   open?: boolean
   fill?: boolean
+  contentPadding?: number
 }
 
 export function Pane(props: PaneProps) {
-  const [local, others] = splitProps(props, ["children", "title", "subtitle", "borderColor", "active", "open", "fill"])
-  const theme = useTheme()
-  const colors = theme.theme
-  const [bg, setBg] = createSignal(
-    theme.mode() === "dark" ? theme.theme.backgroundPanel : theme.theme.backgroundElement,
-  )
+  const [local, others] = splitProps(props, [
+    "children",
+    "title",
+    "subtitle",
+    "active",
+    "open",
+    "fill",
+    "contentPadding",
+  ])
+  const colors = useTheme().theme
   const open = () => local.open ?? true
   const fill = () => local.fill ?? false
-
-  function getBorderColor() {
-    if (!local.borderColor) return bg()
-    if (typeof local.borderColor === "function") {
-      if (local.borderColor() === undefined) {
-        return bg()
-      }
-
-      return local.borderColor()
-    }
-    return local.borderColor
-  }
-
-  function getBackgroundColor() {
-    return theme.mode() === "dark" ? theme.theme.backgroundPanel : theme.theme.backgroundElement
-  }
-
-  createEffect(() => {
-    theme.mode()
-    setBg(getBackgroundColor())
-  })
+  const padding = () => local.contentPadding ?? 1
 
   return (
     <box
-      border={["left"]}
-      customBorderChars={SplitBorder.customBorderChars}
-      borderColor={getBorderColor()}
       {...others}
-      height={!open() ? 3 : others.height}
+      width={others.width ?? "100%"}
+      height={!open() ? 3 : (others.height ?? "100%")}
       flexGrow={fill() ? 1 : others.flexGrow}
+      flexDirection="column"
+      backgroundColor={colors.background}
+      minWidth={0}
+      minHeight={0}
     >
+      {local.title !== undefined && (
+        <box
+          flexDirection="row"
+          justifyContent="space-between"
+          width="100%"
+          flexShrink={0}
+          paddingLeft={1}
+          paddingRight={1}
+          height={2}
+          overflow="hidden"
+        >
+          <text marginLeft={1} marginRight={1} fg={colors.text} wrapMode="none" truncate flexGrow={1} minWidth={1}>
+            {local.title}
+          </text>
+          {local.subtitle &&
+            (typeof local.subtitle === "string" ? (
+              <text
+                marginLeft={1}
+                marginRight={1}
+                fg={colors.textMuted}
+                wrapMode="none"
+                truncate
+                flexShrink={1}
+                maxWidth={20}
+              >
+                {local.subtitle}
+              </text>
+            ) : (
+              <box marginLeft={1} marginRight={1} flexShrink={1} minWidth={0} maxWidth={20} overflow="hidden">
+                {local.subtitle}
+              </box>
+            ))}
+        </box>
+      )}
       <box
-        backgroundColor={bg()}
+        backgroundColor={colors.background}
         width="100%"
-        height={fill() ? "100%" : undefined}
-        paddingTop={1}
-        paddingBottom={open() ? 1 : 0}
-        paddingLeft={1}
-        paddingRight={1}
+        flexGrow={open() ? 1 : 0}
+        minHeight={0}
+        paddingTop={local.title === undefined ? padding() : 0}
+        paddingBottom={open() ? padding() : 0}
+        paddingLeft={padding()}
+        paddingRight={padding()}
       >
-        {local.title && (
-          <box flexDirection="row" justifyContent="space-between">
-            <text marginBottom={1} marginLeft={1} marginRight={1} fg={colors.text}>
-              {local.title}
-            </text>
-            {local.subtitle &&
-              (typeof local.subtitle === "string" ? (
-                <text marginBottom={open() ? 1 : 0} marginLeft={1} marginRight={1} fg={colors.textMuted}>
-                  {local.subtitle}
-                </text>
-              ) : (
-                <box marginBottom={open() ? 1 : 0} marginLeft={1} marginRight={1}>
-                  {local.subtitle}
-                </box>
-              ))}
-          </box>
-        )}
         {open() && local.children && local.children}
       </box>
     </box>
