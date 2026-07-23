@@ -5,11 +5,17 @@ import { KeybindsConfig } from "@/util/config"
 import { useKV } from "./kv"
 import { onCleanup, onMount } from "solid-js"
 import { Git } from "@lib/git"
+import { Opencode } from "@lib/opencode"
 
 type Panes = "files"
 type View = "diff" | "code"
 const DiffView = z.enum(["split", "unified"])
 export type DiffView = z.infer<typeof DiffView>
+const AIModel = z.object({
+  providerID: z.string(),
+  modelID: z.string(),
+})
+export type AIModel = z.infer<typeof AIModel>
 
 type Config = {
   theme?: string
@@ -20,6 +26,7 @@ type Config = {
   diffDimStaged: boolean
   keybinds: KeybindsConfig
   aiEnabled: boolean
+  aiModel: AIModel
 }
 
 const File = z.object({
@@ -60,6 +67,7 @@ export const { use: useApplication, provider: ApplicationProvider } = createSimp
         keybinds: KeybindsConfig.parse({}),
         theme: kv.get("theme", "opencode"),
         aiEnabled: false,
+        aiModel: AIModel.catch(Opencode.defaultModel).parse(kv.get("ai_model")),
       },
     })
 
@@ -166,6 +174,10 @@ export const { use: useApplication, provider: ApplicationProvider } = createSimp
       setDiffDimStaged(v: boolean) {
         setStore("config", "diffDimStaged", v)
         return kv.set("diff_dim_staged", v)
+      },
+      setAiModel(v: AIModel) {
+        setStore("config", "aiModel", v)
+        return kv.set("ai_model", v)
       },
       refreshFiles,
       setConfig: (v: Config) => setStore("config", v),

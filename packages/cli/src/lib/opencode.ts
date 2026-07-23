@@ -6,6 +6,8 @@ const AI_MODEL = { providerID: "opencode", modelID: "big-pickle" }
 let _client: Awaited<ReturnType<typeof createOpencode>> | null = null
 
 export namespace Opencode {
+  export const defaultModel = AI_MODEL
+
   async function getClient() {
     if (!_client) {
       _client = await createOpencode({
@@ -33,14 +35,14 @@ export namespace Opencode {
     }
   }
 
-  export async function prompt(message: string): Promise<string | null> {
+  export async function prompt(message: string, model = defaultModel): Promise<string | null> {
     try {
       const opencode = await getClient()
       const session = await opencode.client.session.create()
       const result = await opencode.client.session.prompt({
         path: { id: session.data!.id },
         body: {
-          model: AI_MODEL,
+          model,
           parts: [{ type: "text", text: message }],
           tools: { "*": false },
         },

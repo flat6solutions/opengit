@@ -74,7 +74,7 @@ export default function CommitDialog({ onConfirm }: DiscardDialogProps) {
 
     const p = PROMPT.concat("\n\n").concat(diff.join(""))
 
-    const res = await Opencode.prompt(p).then((v) => v?.trim().split("\n")[0])
+    const res = await Opencode.prompt(p, app.config.aiModel).then((v) => v?.trim().split("\n")[0])
     if (disposed) return
 
     setGeneratingMessage(false)

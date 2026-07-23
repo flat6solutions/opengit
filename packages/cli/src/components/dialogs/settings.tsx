@@ -3,6 +3,7 @@ import { useApplication } from "@context/application"
 import { useTheme } from "@context/theme"
 import { useToast } from "@context/toast"
 import ThemesDialog from "./themes"
+import ModelsDialog from "./models"
 
 export default function SettingsDialog() {
   const app = useApplication()
@@ -41,6 +42,13 @@ export default function SettingsDialog() {
           category: "Diff",
           onSelect: () =>
             save(app.setDiffDimStaged(!app.config.diffDimStaged), "Failed to save staged file appearance"),
+        },
+        {
+          title: "Model",
+          footer: `${app.config.aiModel.providerID}/${app.config.aiModel.modelID}`,
+          value: "ai-model",
+          category: "AI",
+          onSelect: (dialog) => dialog.replace(() => <ModelsDialog />),
         },
         {
           title: "Theme",
