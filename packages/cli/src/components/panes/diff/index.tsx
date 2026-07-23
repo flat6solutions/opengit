@@ -17,6 +17,12 @@ export default function Diff() {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
   const counts = createMemo(() => Git.getLineCounts(diff()))
+  const dimmed = createMemo(() => app.config.diffDimStaged && Git.isFileFullyStaged(app.file.status))
+  const rendered = createMemo(() => {
+    const value = diff()
+    if (!value) return
+    return { value, dimmed: dimmed() }
+  })
   const diffFiletype = createMemo(() => {
     const type = filetype(app.file.path)
     if (type === "astro") return "html"
@@ -30,8 +36,8 @@ export default function Diff() {
     if (c.added === 0 && c.removed === 0) return undefined
     return (
       <box flexDirection="row" gap={1} paddingRight={1}>
-        {c.added > 0 && <text fg={theme.success}>+{c.added}</text>}
-        {c.removed > 0 && <text fg={theme.error}>-{c.removed}</text>}
+        {c.added > 0 && <text fg={dimmed() ? theme.textMuted : theme.success}>+{c.added}</text>}
+        {c.removed > 0 && <text fg={dimmed() ? theme.textMuted : theme.error}>-{c.removed}</text>}
       </box>
     )
   })
@@ -110,35 +116,35 @@ export default function Diff() {
             <text fg={theme.textMuted}>No changes to display</text>
           </box>
         </Show>
-        <Show when={diff()} keyed>
-          {(d: string) => (
+        <Show when={rendered()} keyed>
+          {(d: { value: string; dimmed: boolean }) => (
             <>
               <scrollbox width="100%" height="100%" scrollX={true}>
                 <diff
                   keyed
-                  diff={d}
+                  diff={d.value}
                   view={app.config.diffView}
                   wrapMode={app.config.diffWrap ? "word" : "none"}
-                  filetype={diffFiletype()}
+                  filetype={d.dimmed ? "opengit-plain-text" : diffFiletype()}
                   syntaxStyle={syntax()}
                   showLineNumbers={true}
                   width="100%"
-                  fg={theme.text}
+                  fg={dimmed() ? theme.textMuted : theme.text}
                   // addedBg={theme.diffAddedBg}
-                  addedBg="#1F3025"
+                  addedBg={dimmed() ? theme.backgroundElement : "#1F3025"}
                   // removedBg={theme.diffRemovedBg}
-                  removedBg="#372526"
+                  removedBg={dimmed() ? theme.backgroundElement : "#372526"}
                   contextBg={theme.background}
                   // addedSignColor={theme.diffHighlightAdded}
-                  addedSignColor="#88d39b"
+                  addedSignColor={dimmed() ? theme.textMuted : "#88d39b"}
                   // removedSignColor={theme.diffHighlightRemoved}
-                  removedSignColor="#f0a0a0"
+                  removedSignColor={dimmed() ? theme.textMuted : "#f0a0a0"}
                   lineNumberFg={theme.diffLineNumber}
                   lineNumberBg={theme.background}
                   // addedLineNumberBg={theme.diffAddedLineNumberBg}
-                  addedLineNumberBg="#1F3025"
+                  addedLineNumberBg={dimmed() ? theme.backgroundElement : "#1F3025"}
                   // removedLineNumberBg={theme.diffRemovedLineNumberBg}
-                  removedLineNumberBg="#372526"
+                  removedLineNumberBg={dimmed() ? theme.backgroundElement : "#372526"}
                 />
               </scrollbox>
               <KeybindHelper label="View File" key="trigger_diff" />

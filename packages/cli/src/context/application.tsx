@@ -17,6 +17,7 @@ type Config = {
   mainView: View
   diffView: DiffView
   diffWrap: boolean
+  diffDimStaged: boolean
   keybinds: KeybindsConfig
   aiEnabled: boolean
 }
@@ -55,6 +56,7 @@ export const { use: useApplication, provider: ApplicationProvider } = createSimp
         mainView: "diff",
         diffView: DiffView.catch("split").parse(kv.get("diff_view")),
         diffWrap: z.boolean().catch(true).parse(kv.get("diff_wrap")),
+        diffDimStaged: z.boolean().catch(true).parse(kv.get("diff_dim_staged")),
         keybinds: KeybindsConfig.parse({}),
         theme: kv.get("theme", "opencode"),
         aiEnabled: false,
@@ -160,6 +162,10 @@ export const { use: useApplication, provider: ApplicationProvider } = createSimp
       setDiffWrap(v: boolean) {
         setStore("config", "diffWrap", v)
         return kv.set("diff_wrap", v)
+      },
+      setDiffDimStaged(v: boolean) {
+        setStore("config", "diffDimStaged", v)
+        return kv.set("diff_dim_staged", v)
       },
       refreshFiles,
       setConfig: (v: Config) => setStore("config", v),

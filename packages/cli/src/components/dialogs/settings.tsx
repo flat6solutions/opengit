@@ -35,6 +35,14 @@ export default function SettingsDialog() {
           onSelect: () => save(app.setDiffWrap(!app.config.diffWrap), "Failed to save word wrapping"),
         },
         {
+          title: "Dim staged files",
+          footer: app.config.diffDimStaged ? "On" : "Off",
+          value: "diff-dim-staged",
+          category: "Diff",
+          onSelect: () =>
+            save(app.setDiffDimStaged(!app.config.diffDimStaged), "Failed to save staged file appearance"),
+        },
+        {
           title: "Theme",
           footer: theme.selected,
           value: "theme",

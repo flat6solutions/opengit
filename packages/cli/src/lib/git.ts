@@ -62,6 +62,10 @@ export namespace Git {
     return ["M", "A", "D", "R", "C", "T"].includes(status[0] ?? "")
   }
 
+  export function isFileFullyStaged(status: string) {
+    return isFileStaged(status) && status[1] === " "
+  }
+
   export async function getDiffAll(path: string, status: string) {
     if (status === "??") return getDiff(path, status)
 

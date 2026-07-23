@@ -249,7 +249,8 @@ export default function Files(props: { visible: boolean }) {
                         fg={
                           row.fullPath === highlighted()
                             ? theme.background
-                            : row.type === "directory"
+                            : row.type === "directory" ||
+                                (app.config.diffDimStaged && Git.isFileFullyStaged(row.status ?? ""))
                               ? theme.textMuted
                               : theme.text
                         }
@@ -265,7 +266,9 @@ export default function Files(props: { visible: boolean }) {
                         fg={
                           row.fullPath === highlighted()
                             ? theme.background
-                            : getNameStatusColor(row.status || "")
+                            : app.config.diffDimStaged && Git.isFileFullyStaged(row.status ?? "")
+                              ? theme.textMuted
+                              : getNameStatusColor(row.status || "")
                         }
                       >
                         {row.status}
