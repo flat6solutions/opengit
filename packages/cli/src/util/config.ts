@@ -8,6 +8,7 @@ export const KeybindsConfig = z.object({
   next: z.string().optional().default("j,down").describe("Next object"),
   previous: z.string().optional().default("k,up").describe("Previous object"),
   discard_file: z.string().optional().default("d").describe("Discard file"),
+  discard_all_files: z.string().optional().default("shift+d").describe("Discard all files"),
   stage_unstage_file: z.string().optional().default("space").describe("Stage/Unstage file"),
   stage_all_files: z.string().optional().default("a").describe("Stage all files"),
   unstage_all_files: z.string().optional().default("shift+a").describe("Unstage all files"),

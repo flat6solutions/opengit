@@ -6,13 +6,15 @@ import { Git } from "@lib/git"
 import { type File } from "@context/application"
 
 interface DiscardDialogProps {
-  file: File
+  file?: File
+  all?: boolean
   onConfirm: () => void
   onCancel: () => void
 }
 
 export default function DiscardDialog({
   file,
+  all,
   onConfirm,
 }: DiscardDialogProps) {
   const theme = useTheme().theme
@@ -25,7 +27,9 @@ export default function DiscardDialog({
   })
 
   async function submit() {
-    const res = await Git.discardFile(file.path, file.status)
+    const res = all
+      ? await Git.discardAllFiles()
+      : await Git.discardFile(file!.path, file!.status)
     
     if (res.error) {
       toast.error(`Failed to discard: ${res.error}`)
@@ -49,7 +53,7 @@ export default function DiscardDialog({
         paddingRight={4}
         marginBottom={1}
       >
-        <text fg={theme.text} attributes={TextAttributes.BOLD}>Discard changes?</text>
+        <text fg={theme.text} attributes={TextAttributes.BOLD}>Discard {all ? "all changes" : "changes"}?</text>
         <text fg={theme.textMuted}>esc</text>
       </box>
       <box
@@ -59,8 +63,10 @@ export default function DiscardDialog({
         flexDirection="column"
         gap={1}
       >
-        <text fg={theme.textMuted}>Are you sure you want to discard changes to:</text>
-        <text fg={theme.error}>[*] {file.path}</text>
+        <text fg={theme.textMuted}>
+          {all ? "Discard all unstaged changes and untracked files?" : "Are you sure you want to discard changes to:"}
+        </text>
+        <text fg={theme.error}>{all ? "This cannot be undone." : `[*] ${file!.path}`}</text>
       </box>
       <box
         paddingLeft={4}

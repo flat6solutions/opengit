@@ -140,6 +140,20 @@ export namespace Git {
     return { error: useful }
   }
 
+  export async function discardAllFiles() {
+    const root = await getGitRoot()
+    const restore = await $`git -C ${root} restore .`.quiet().nothrow()
+
+    if (restore.exitCode !== 0) {
+      return { error: restore.stderr.toString().trim() || `git restore failed (exit ${restore.exitCode})` }
+    }
+
+    const clean = await $`git -C ${root} clean -fd`.quiet().nothrow()
+    if (clean.exitCode === 0) return { success: "Success" }
+
+    return { error: clean.stderr.toString().trim() || `git clean failed (exit ${clean.exitCode})` }
+  }
+
   export function getLineCounts(diff: string): {
     added: number
     removed: number

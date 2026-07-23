@@ -115,6 +115,21 @@ export default function Files() {
       return
     }
 
+    if (keybind.match("discard_all_files", event)) {
+      if (files().length === 0) return
+      dialog.replace(() => (
+        <DiscardDialog
+          all
+          onConfirm={async () => {
+            await getFiles()
+            dialog.clear()
+          }}
+          onCancel={() => {}}
+        />
+      ))
+      return
+    }
+
     if (keybind.match("stage_unstage_file", event)) {
       if (Git.isFileStaged(app.file.status)) {
         await Git.unstageFile(app.file.path)

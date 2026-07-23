@@ -18,6 +18,7 @@ export default function Keybinds() {
     { label: "unstage all", key: "unstage_all_files" },
     { label: "commit", key: "commit" },
     { label: "discard", key: "discard_file" },
+    { label: "discard all", key: "discard_all_files" },
   ]
 
   useKeyboard(async event => {
