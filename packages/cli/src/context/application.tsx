@@ -75,45 +75,14 @@ export const { use: useApplication, provider: ApplicationProvider } = createSimp
 
     function loadFiles() {
       pending = (async () => {
-        const out = await Bun.$`git status --porcelain -z --untracked-files=all --find-renames=50%`.quiet().nothrow()
-        if (out.exitCode !== 0) {
-          setStore("filesLoaded", true)
-          setStore("filesError", true)
-          return
-        }
-
-        const entries = out.text().split("\x00").filter(Boolean)
-        const files: Array<{ status: string; path: string; previousPath?: string }> = []
-
-        for (let index = 0; index < entries.length; index++) {
-          const entry = entries[index]
-          const status = entry.slice(0, 2)
-          const path = entry.slice(3)
-
-          if (status.startsWith("R") || status.startsWith("C")) {
-            files.push({ status, path, previousPath: entries[index + 1] })
-            index++
-            continue
-          }
-          files.push({ status, path })
-        }
-
         setStore(
           "files",
-          (
-            await Promise.all(
-              files.map(async (file) => ({
-                ...file,
-                ...Git.getLineCounts(await Git.getDiffAll(file.path, file.status)),
-              })),
-            )
-          ).sort((a, b) => a.path.localeCompare(b.path)),
+          (await Git.getChangedFiles()).sort((a, b) => a.path.localeCompare(b.path)),
         )
         setStore("filesLoaded", true)
         setStore("filesError", false)
       })()
-        .catch((error) => {
-          console.error("Failed to refresh changed files", error)
+        .catch(() => {
           setStore("filesLoaded", true)
           setStore("filesError", true)
         })
@@ -130,7 +99,7 @@ export const { use: useApplication, provider: ApplicationProvider } = createSimp
     }
 
     onMount(() => {
-      refreshFiles()
+      loadFiles()
       const interval = setInterval(() => {
         if (!pending) loadFiles()
       }, 1000)

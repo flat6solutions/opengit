@@ -17,13 +17,12 @@ const Branch = z.object({
 })
 export type Branch = z.infer<typeof Branch>
 
-let cachedGitRoot: string | null = null
+let cachedGitRoot: Promise<string> | undefined
 
 export namespace Git {
   export async function getGitRoot() {
     if (cachedGitRoot) return cachedGitRoot
-    const res = await $`git rev-parse --show-toplevel`.quiet().nothrow()
-    cachedGitRoot = res.stdout.toString().trim()
+    cachedGitRoot = $`git rev-parse --show-toplevel`.quiet().nothrow().text().then((root) => root.trim())
     return cachedGitRoot
   }
 
@@ -72,10 +71,66 @@ export namespace Git {
     const root = await getGitRoot()
     return (
       await Promise.all([
-        isFileStaged(status) ? Bun.$`git -C ${root} diff -U0 --cached -- ${path}`.quiet().nothrow().text() : "",
-        status[1] !== " " ? Bun.$`git -C ${root} diff -U0 -- ${path}`.quiet().nothrow().text() : "",
+        isFileStaged(status)
+          ? Bun.$`git -C ${root} diff -U0 --cached -- ${path}`.quiet().nothrow().text()
+          : "",
+        status[1] !== " "
+          ? Bun.$`git -C ${root} diff -U0 -- ${path}`.quiet().nothrow().text()
+          : "",
       ])
     ).join("\n")
+  }
+
+  export async function getChangedFiles() {
+    const root = await getGitRoot()
+    const head = await Bun.$`git -C ${root} rev-parse --verify HEAD`.quiet().nothrow()
+    const [status, stats] = await Promise.all([
+      Bun.$`git -C ${root} status --porcelain=v1 --untracked-files=all --no-renames -z -- .`.quiet().nothrow(),
+      head.exitCode === 0
+        ? Bun.$`git -C ${root} diff --no-ext-diff --no-renames --numstat -z HEAD -- .`.quiet().nothrow()
+        : undefined,
+    ])
+    if (status.exitCode !== 0) throw new Error(status.stderr.toString().trim() || "git status failed")
+
+    const counts = new Map<string, { added: number; removed: number }>()
+    for (const item of stats?.text().split("\0") ?? []) {
+      const a = item.indexOf("\t")
+      const b = item.indexOf("\t", a + 1)
+      if (a === -1 || b === -1) continue
+      const path = item.slice(b + 1)
+      if (!path) continue
+      const adds = item.slice(0, a)
+      const dels = item.slice(a + 1, b)
+      const added = adds === "-" ? 0 : Number.parseInt(adds || "0", 10)
+      const removed = dels === "-" ? 0 : Number.parseInt(dels || "0", 10)
+      counts.set(path, {
+        added: Number.isFinite(added) ? added : 0,
+        removed: Number.isFinite(removed) ? removed : 0,
+      })
+    }
+
+    return Array.fromAsync(
+      status.text().split("\0").filter(Boolean),
+      async (item) => {
+        const code = item.slice(0, 2)
+        const path = item.slice(3)
+        const stat = counts.get(path)
+        if (stat || (code !== "??" && (!code.includes("A") || code.includes("D")))) {
+          return { status: code, path, added: stat?.added ?? 0, removed: stat?.removed ?? 0 }
+        }
+
+        const result = await Bun.$`git -C ${root} diff --no-index --numstat -- /dev/null ${path}`.quiet().nothrow()
+        const parts = result.text().split("\t")
+        const added = parts[0] === "-" ? 0 : Number.parseInt(parts[0] || "0", 10)
+        const removed = parts[1] === "-" ? 0 : Number.parseInt(parts[1] || "0", 10)
+        return {
+          status: code,
+          path,
+          added: Number.isFinite(added) ? added : 0,
+          removed: Number.isFinite(removed) ? removed : 0,
+        }
+      },
+    )
   }
 
   export async function stageFile(path: string) {
